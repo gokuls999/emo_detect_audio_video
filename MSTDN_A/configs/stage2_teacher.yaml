@@ -1,0 +1,12 @@
+inherits: base.yaml
+training:
+  epochs: 50
+  lr: 0.00005
+  warmup_epochs: 5
+  batch_size: 16
+loss:
+  ce: 1.0
+  bce: 0.5
+  va: 0.5
+  caption: 0.3
+  stress: 0.5

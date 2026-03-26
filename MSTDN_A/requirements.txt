@@ -1,0 +1,41 @@
+# ── Core ML ──
+torch>=2.1.0
+torchaudio>=2.1.0
+transformers>=4.37.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# ── Data & Audio ──
+pandas>=2.0.0
+openpyxl>=3.1.0
+librosa>=0.10.0
+soundfile>=0.12.0
+praat-parselmouth>=0.4.3
+crepe>=0.0.13
+pyroomacoustics>=0.7.3
+
+# ── Model components ──
+einops>=0.7.0
+rotary-embedding-torch
+
+# ── Training & Evaluation ──
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+tqdm>=4.65.0
+pyyaml>=6.0.1
+
+# ── Dashboard (server) ──
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+python-multipart>=0.0.6
+yt-dlp>=2024.1.0
+
+# ── Face detection ──
+deepface>=0.0.80
+tf-keras>=2.16.0
+
+# ── Optional: VAD & diarization ──
+# pyannote.audio>=3.1.0
+# silero-vad

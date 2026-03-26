@@ -1,0 +1,56 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
+
+# ── Large data (datasets) ──
+video_clips/
+physiological_data/
+CREMA-D/
+RAVDESS/
+MELD/
+english_datasets/
+auto_labels/facial_landmarks/
+auto_labels/landmarks.rar
+*.rar
+
+# ── Model checkpoints (too large for GitHub) ──
+MSTDN_A/checkpoints/
+*.pt
+*.pth
+*.onnx
+
+# ── Logs & temp files ──
+MSTDN_A/logs/
+MSTDN_A/dashboard/nul
+MSTDN_A/dashboard/dashboard.db
+nul
+server_log.txt
+*.log
+*.err.log
+
+# ── Session reports (generated at runtime) ──
+MSTDN_A/session_*_report.*
+
+# ── IDE & OS ──
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# ── Claude/tool artifacts ──
+.claude/
+
+# ── Research documents (private) ──
+documents/*.pdf
+documents/*.docx
+documents/CLAUDE.md
+
+# ── Misc ──
+finetune_status.json
+implementation_prompt/

@@ -1,0 +1,9 @@
+inherits: base.yaml
+training:
+  epochs: 60
+  lr: 0.00005
+  warmup_epochs: 5
+loss:
+  alpha: 1.0
+  beta: 0.5
+  gamma: 0.5

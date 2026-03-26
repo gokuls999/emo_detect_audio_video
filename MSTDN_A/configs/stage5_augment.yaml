@@ -1,0 +1,9 @@
+inherits: base.yaml
+training:
+  epochs: 15
+  lr: 0.000005
+augmentation:
+  rir_p: 0.5
+  noise_p: 0.5
+  mic_deg_p: 0.5
+  tempo_pitch_p: 0.5

@@ -1,0 +1,6 @@
+inherits: base.yaml
+training:
+  epochs: 20
+  lr: 0.00001
+loss:
+  caption_refine: 0.3

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MSTDN-A — YouTube Test</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;padding:20px}
+
+/* header */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #21262d}
+.hdr-title{display:flex;align-items:center;gap:10px}
+.hdr-title h1{font-size:18px;font-weight:700;color:#c9d1d9}
+.hdr-title span{font-size:13px;color:#8b949e;font-weight:400}
+.badge-live{background:#1a3a1a;color:#3fb950;border:1px solid #2ea04333;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.5px}
+.back-link{color:#58a6ff;text-decoration:none;font-size:13px;opacity:.7}
+.back-link:hover{opacity:1}
+
+/* url bar */
+.url-bar{display:flex;gap:8px;margin-bottom:16px}
+.url-input{flex:1;padding:9px 14px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:13px;outline:none;transition:border .2s}
+.url-input:focus{border-color:#58a6ff}
+.url-input::placeholder{color:#484f58}
+button{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.3px;transition:opacity .15s}
+button:hover{opacity:.85}
+.btn-load{background:#238636;color:#fff}
+.btn-stop{background:#da3633;color:#fff}
+.btn-mute{background:#1f6feb;color:#fff;min-width:110px}
+
+/* main layout */
+.main{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+
+/* left: youtube + title + mode */
+.yt-wrap{display:flex;flex-direction:column;gap:8px}
+.yt-placeholder{width:100%;aspect-ratio:16/9;background:#161b22;border:1px solid #30363d;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.yt-placeholder svg{opacity:.2}
+.yt-placeholder p{color:#484f58;font-size:13px}
+#yt-frame-wrap{width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid #30363d;display:none}
+#yt-iframe{width:100%;height:100%;border:none;display:block}
+.yt-meta{display:flex;align-items:center;justify-content:space-between}
+.yt-title{font-size:12px;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+.mode-pill{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.mode-idle{background:#21262d;color:#8b949e}
+.mode-audio{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
+.mode-face{background:#2ea04322;color:#3fb950;border:1px solid #2ea04344}
+
+/* audio wave panel */
+.audio-panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 14px;margin-top:4px}
+.audio-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.audio-panel-title{font-size:10px;font-weight:700;color:#484f58;letter-spacing:.5px}
+.audio-source-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.3px}
+.tag-audio{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
+.tag-face{background:#2ea04322;color:#3fb950;border:1px solid #2ea04344}
+.tag-idle{background:#21262d;color:#484f58}
+.wave-canvas{width:100%;height:40px;border-radius:4px;background:#0d1117}
+.audio-rms-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.rms-bar-track{flex:1;height:6px;background:#21262d;border-radius:3px;overflow:hidden}
+.rms-bar-fill{height:100%;border-radius:3px;background:#58a6ff;transition:width .15s ease;width:0}
+.rms-val{font-size:9px;color:#484f58;min-width:40px;text-align:right}
+
+/* right: emotion card */
+.emo-card{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden}
+.emo-accent{height:3px;background:#58a6ff}
+.emo-body{padding:20px}
+.emo-icon{font-size:56px;text-align:center;line-height:1;margin-bottom:6px;transition:all .3s}
+.emo-name{font-size:22px;font-weight:700;text-align:center;color:#58a6ff;margin-bottom:2px}
+.emo-conf{font-size:11px;text-align:center;color:#8b949e;margin-bottom:16px}
+
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-box{background:#0d1117;border-radius:6px;padding:8px;text-align:center}
+.stat-label{font-size:9px;color:#484f58;letter-spacing:.5px;font-weight:700;margin-bottom:2px}
+.stat-val{font-size:16px;font-weight:700}
+
+.bars-wrap{display:flex;flex-direction:column;gap:5px}
+.bar-row{display:grid;grid-template-columns:80px 1fr 38px;align-items:center;gap:6px}
+.bar-lbl{font-size:10px;color:#8b949e;text-align:right}
+.bar-track{height:7px;background:#21262d;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.bar-pct{font-size:10px;color:#484f58;text-align:right}
+
+/* alert */
+.alert-banner{background:#da363322;border:1px solid #da363344;color:#ff7b72;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;margin-top:10px;display:none;text-align:center}
+
+/* teach panel */
+.teach-panel{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 14px;margin-top:12px}
+.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.teach-title{font-size:10px;font-weight:700;color:#484f58;letter-spacing:.5px}
+.teach-count{font-size:10px;color:#58a6ff;font-weight:600}
+.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.teach-btn{padding:5px 3px;border-radius:5px;border:1px solid #30363d;background:#161b22;color:#c9d1d9;cursor:pointer;font-size:9px;font-weight:600;transition:all .15s;text-align:center;white-space:nowrap}
+.teach-btn:hover{border-color:#58a6ff;background:#1f6feb22}
+.teach-btn.taught{border-color:#3fb950;background:#1a3a1a;animation:flash .4s}
+@keyframes flash{0%{background:#3fb95066}100%{background:#1a3a1a}}
+.teach-feedback{font-size:10px;color:#8b949e;margin-top:8px;min-height:16px;text-align:center}
+.teach-save-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.teach-save-btn{padding:4px 10px;border-radius:4px;border:1px solid #30363d;background:#21262d;color:#8b949e;cursor:pointer;font-size:9px;font-weight:700}
+.teach-save-btn:hover{border-color:#58a6ff;color:#c9d1d9}
+.mode-audioface{background:#d2992222;color:#d29922;border:1px solid #d2992244}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-title">
+    <h1>MSTDN-A <span>YouTube Emotion Test</span></h1>
+    <span class="badge-live" id="live-badge">IDLE</span>
+  </div>
+  <a href="/" class="back-link">← Dashboard</a>
+</div>
+
+<div class="url-bar">
+  <input class="url-input" id="yt-url" type="text"
+         placeholder="Paste YouTube URL — e.g. https://www.youtube.com/watch?v=..." />
+  <button class="btn-load" onclick="loadVideo()">Load</button>
+  <button class="btn-stop" onclick="stopVideo()">Stop</button>
+  <button class="btn-mute" id="mute-btn" onclick="toggleMute()">Mute Audio</button>
+</div>
+
+<div class="main">
+
+  <!-- left: player + audio panel -->
+  <div class="yt-wrap">
+    <div class="yt-placeholder" id="yt-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c9d1d9" stroke-width="1">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <p>Paste a YouTube URL above and click Load</p>
+    </div>
+    <div id="yt-frame-wrap">
+      <iframe id="yt-iframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    </div>
+    <div class="yt-meta">
+      <div class="yt-title" id="yt-title"></div>
+      <div class="mode-pill mode-idle" id="mode-pill">IDLE</div>
+    </div>
+
+    <!-- audio waveform panel -->
+    <div class="audio-panel">
+      <div class="audio-panel-hdr">
+        <div class="audio-panel-title">AUDIO STREAM</div>
+        <div class="audio-source-tag tag-idle" id="source-tag">IDLE</div>
+      </div>
+      <canvas class="wave-canvas" id="wave-canvas" height="40"></canvas>
+      <div class="audio-rms-row">
+        <div class="rms-bar-track"><div class="rms-bar-fill" id="rms-fill"></div></div>
+        <div class="rms-val" id="rms-val">0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- right: emotion -->
+  <div class="emo-card">
+    <div class="emo-accent" id="emo-accent"></div>
+    <div class="emo-body">
+      <div class="emo-icon" id="emoji">😐</div>
+      <div class="emo-name" id="emo-name">Waiting...</div>
+      <div class="emo-conf" id="emo-conf">—</div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-label">STRESS</div>
+          <div class="stat-val" id="stress" style="color:#f85149">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">VALENCE</div>
+          <div class="stat-val" id="valence" style="color:#3fb950">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">AROUSAL</div>
+          <div class="stat-val" id="arousal" style="color:#d29922">—</div>
+        </div>
+      </div>
+
+      <div class="bars-wrap" id="bars"></div>
+      <div class="alert-banner" id="alert-banner">⚠ High Stress Detected</div>
+
+      <!-- teach panel -->
+      <div class="teach-panel">
+        <div class="teach-hdr">
+          <div class="teach-title">TEACH MODEL</div>
+          <div class="teach-count" id="teach-count">0 corrections</div>
+        </div>
+        <div class="teach-grid" id="teach-grid"></div>
+        <div class="teach-feedback" id="teach-feedback">Click an emotion to correct the model</div>
+        <div class="teach-save-row">
+          <span style="font-size:9px;color:#484f58">Buffer: <span id="teach-buffer">0</span> chunks</span>
+          <button class="teach-save-btn" onclick="teachSave()">Save Checkpoint</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const EMOTIONS = ["Anger","Disgust","Fear","Happiness","Neutral","Sadness","Surprise","Contempt","Anxiety","Helplessness","Disappointment"];
+const COLORS   = ["#f85149","#a371f7","#ff9e64","#3fb950","#8b949e","#79c0ff","#d29922","#6e7681","#ffa657","#6e7681","#6e7681"];
+const ACCENT_COLORS = { Anger:"#f85149", Happiness:"#3fb950", Sadness:"#79c0ff", Fear:"#ff9e64", Surprise:"#d29922", Disgust:"#a371f7" };
+
+let muted = false;
+let ws    = null;
+
+// -- audio waveform history ---------------------------------------------------
+const waveCanvas = document.getElementById('wave-canvas');
+const waveCtx    = waveCanvas.getContext('2d');
+const WAVE_HIST  = 80;
+let waveHistory  = new Array(WAVE_HIST).fill(0);
+
+function drawWave() {
+  const w = waveCanvas.width = waveCanvas.clientWidth;
+  const h = waveCanvas.height;
+  waveCtx.clearRect(0, 0, w, h);
+  const barW = w / WAVE_HIST;
+  const mid  = h / 2;
+  for (let i = 0; i < WAVE_HIST; i++) {
+    const v  = Math.min(waveHistory[i] * 8, 1);   // scale RMS for visibility
+    const bh = Math.max(v * (h - 4), 1);
+    const x  = i * barW;
+    const c  = v > 0.05 ? '#58a6ff' : '#21262d';
+    waveCtx.fillStyle = c;
+    waveCtx.fillRect(x + 1, mid - bh / 2, barW - 2, bh);
+  }
+}
+
+function pushWaveRMS(rms) {
+  waveHistory.push(rms);
+  if (waveHistory.length > WAVE_HIST) waveHistory.shift();
+  drawWave();
+  // update rms bar + value
+  const pct = Math.min(rms * 800, 100);
+  document.getElementById('rms-fill').style.width = pct + '%';
+  document.getElementById('rms-fill').style.background = rms > 0.01 ? '#58a6ff' : '#21262d';
+  document.getElementById('rms-val').textContent = rms.toFixed(4);
+}
+
+// -- websocket ----------------------------------------------------------------
+function connectWS() {
+  ws = new WebSocket(`ws://${location.host}/ws/yt`);
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'emotion_update' || d.type === 'init') {
+      const src = d.type === 'init' ? d.latest : d;
+      if (src) updateUI(src);
+    }
+    if (d.type === 'teach_ack') {
+      document.getElementById('teach-count').textContent = d.teach_count + ' corrections';
+    }
+    if (d.type === 'yt_ended') {
+      document.getElementById('live-badge').textContent = 'ENDED';
+      document.getElementById('live-badge').style.color = '#8b949e';
+      setMode('idle');
+      setSourceTag('idle');
+    }
+  };
+  ws.onclose = () => setTimeout(connectWS, 2000);
+}
+
+function updateUI(d) {
+  document.getElementById('emoji').textContent    = d.emoji    || '😐';
+  document.getElementById('emo-name').textContent = d.emotion  || 'Neutral';
+  document.getElementById('emo-conf').textContent = d.confidence != null ? `confidence: ${(d.confidence*100).toFixed(1)}%` : '—';
+  document.getElementById('stress').textContent   = d.stress   != null ? (d.stress*100).toFixed(0)+'%' : '—';
+  document.getElementById('valence').textContent  = d.valence  != null ? (d.valence>=0?'+':'')+d.valence.toFixed(2) : '—';
+  document.getElementById('arousal').textContent  = d.arousal  != null ? d.arousal.toFixed(2) : '—';
+
+  const ac = ACCENT_COLORS[d.emotion] || '#58a6ff';
+  document.getElementById('emo-accent').style.background = ac;
+  document.getElementById('emo-name').style.color = ac;
+
+  document.getElementById('alert-banner').style.display = d.alert ? 'block' : 'none';
+
+  if (d.probs) {
+    const sorted = d.probs.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p);
+    document.getElementById('bars').innerHTML = sorted.map(({p,i}) => `
+      <div class="bar-row">
+        <div class="bar-lbl">${EMOTIONS[i]}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${(p*100).toFixed(1)}%;background:${COLORS[i]}"></div>
+        </div>
+        <div class="bar-pct">${(p*100).toFixed(0)}%</div>
+      </div>`).join('');
+  }
+
+  // audio waveform
+  if (d.audio_rms != null) pushWaveRMS(d.audio_rms);
+
+  // source mode tag
+  if (d.mode === 'audio+face')    { setMode('audioface'); setSourceTag('audioface'); }
+  else if (d.mode === 'audio')    { setMode('audio'); setSourceTag('audio'); }
+  else if (d.mode === 'face_only'){ setMode('face'); setSourceTag('face'); }
+}
+
+function setMode(m) {
+  const pill = document.getElementById('mode-pill');
+  pill.className = 'mode-pill mode-' + m;
+  pill.textContent = m === 'face' ? 'FACE 100%' : m === 'audio' ? 'AUDIO 100%' : m === 'audioface' ? 'AUDIO+FACE' : 'IDLE';
+}
+
+function setSourceTag(m) {
+  const tag = document.getElementById('source-tag');
+  tag.className = 'audio-source-tag tag-' + (m === 'audioface' ? 'audio' : m);
+  tag.textContent = m === 'audio' ? 'AUDIO 100%' : m === 'face' ? 'FACE 100%' : m === 'audioface' ? 'AUDIO+FACE' : 'IDLE';
+}
+
+function loadVideo() {
+  const url = document.getElementById('yt-url').value.trim();
+  if (!url) { alert('Paste a YouTube URL first'); return; }
+
+  document.getElementById('emo-name').textContent = 'Loading...';
+  waveHistory = new Array(WAVE_HIST).fill(0);
+  drawWave();
+
+  fetch('/api/yt/load', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})
+  })
+  .then(r => { if (!r.ok) return r.json().then(e=>{throw e}); return r.json(); })
+  .then(d => {
+    if (d.video_id) {
+      document.getElementById('yt-placeholder').style.display = 'none';
+      document.getElementById('yt-frame-wrap').style.display  = 'block';
+      document.getElementById('yt-iframe').src =
+        `https://www.youtube.com/embed/${d.video_id}?autoplay=1&enablejsapi=1`;
+      document.getElementById('yt-title').textContent = d.title || '';
+      document.getElementById('live-badge').textContent = 'LIVE';
+      document.getElementById('live-badge').style.color = '#3fb950';
+      setMode('audio');
+      setSourceTag('audio');
+    }
+  })
+  .catch(e => {
+    alert('Error: ' + (e.detail || JSON.stringify(e)));
+    document.getElementById('emo-name').textContent = 'Error';
+  });
+}
+
+function stopVideo() {
+  fetch('/api/yt/stop', {method:'POST'});
+  document.getElementById('yt-iframe').src = '';
+  document.getElementById('yt-frame-wrap').style.display  = 'none';
+  document.getElementById('yt-placeholder').style.display = 'flex';
+  document.getElementById('yt-title').textContent = '';
+  document.getElementById('live-badge').textContent = 'IDLE';
+  document.getElementById('live-badge').style.color = '';
+  document.getElementById('emo-name').textContent = 'Waiting...';
+  setMode('idle');
+  setSourceTag('idle');
+  muted = false;
+  const btn = document.getElementById('mute-btn');
+  btn.textContent = 'Mute Audio'; btn.style.background = '#1f6feb';
+  waveHistory = new Array(WAVE_HIST).fill(0);
+  drawWave();
+}
+
+function toggleMute() {
+  muted = !muted;
+  const btn = document.getElementById('mute-btn');
+  btn.textContent = muted ? 'Unmute Audio' : 'Mute Audio';
+  btn.style.background = muted ? '#6e40c9' : '#1f6feb';
+
+  const iframe = document.getElementById('yt-iframe');
+  if (iframe && iframe.contentWindow) {
+    const cmd = muted ? 'mute' : 'unMute';
+    iframe.contentWindow.postMessage(JSON.stringify({event:'command',func:cmd,args:''}), '*');
+  }
+
+  fetch('/api/yt/mute', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({muted})
+  });
+}
+
+connectWS();
+drawWave();
+
+// -- teach buttons -----------------------------------------------------------
+const TEACH_EMOJIS = ["😠","🤢","😨","😊","😐","😢","😲","😒","😰","😞","😔"];
+const teachGrid = document.getElementById('teach-grid');
+EMOTIONS.forEach((emo, idx) => {
+  const btn = document.createElement('button');
+  btn.className = 'teach-btn';
+  btn.textContent = TEACH_EMOJIS[idx] + ' ' + emo;
+  btn.onclick = () => doTeach(idx, btn);
+  teachGrid.appendChild(btn);
+});
+
+function doTeach(idx, btn) {
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+  document.getElementById('teach-feedback').textContent = 'Teaching: ' + EMOTIONS[idx] + '...';
+  fetch('/api/yt/teach', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({emotion_idx: idx})
+  })
+  .then(r => { if (!r.ok) return r.json().then(e => { throw e; }); return r.json(); })
+  .then(d => {
+    btn.classList.add('taught');
+    setTimeout(() => btn.classList.remove('taught'), 600);
+    document.getElementById('teach-count').textContent = d.teach_count + ' corrections';
+    document.getElementById('teach-feedback').textContent =
+      'Taught: ' + d.taught_emotion + ' (loss: ' + d.loss + ') → now predicts: ' + d.new_prediction;
+  })
+  .catch(e => {
+    document.getElementById('teach-feedback').textContent =
+      'Error: ' + (e.detail || JSON.stringify(e));
+  })
+  .finally(() => { btn.disabled = false; btn.style.opacity = '1'; });
+}
+
+function teachSave() {
+  fetch('/api/yt/teach/save', {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('teach-feedback').textContent =
+        'Checkpoint saved (' + d.teach_count + ' steps)';
+    });
+}
+
+// poll teach status every 3s
+setInterval(() => {
+  fetch('/api/yt/teach/status').then(r => r.json()).then(d => {
+    document.getElementById('teach-buffer').textContent = d.buffer_size;
+    document.getElementById('teach-count').textContent = d.teach_count + ' corrections';
+  }).catch(() => {});
+}, 3000);
+</script>
+</body>
+</html>
