@@ -38,6 +38,7 @@ from dashboard.database import (
 )
 from dashboard.capture import VideoCapture, AudioCapture
 from dashboard import face_id
+from dashboard import face_emotion
 from utils.runtime import choose_torch_device, force_transformers_offline
 
 # ── constants ───────────────────────────────────────────────────────────────
@@ -209,51 +210,14 @@ def _face_loop():
                                 "distance": round(d["distance"], 3)} for d in detections]
                 })
 
-            # ── face emotion analysis — always runs regardless of registration ──
+            # ── face emotion analysis (ONNX FERPlus) — always runs ──
             try:
-                from deepface import DeepFace
-                fa = DeepFace.analyze(frame, actions=["emotion"],
-                                      enforce_detection=False, silent=True,
-                                      detector_backend="opencv")
+                # whole-frame emotion (fallback for unregistered faces)
+                probs_frame, conf_frame = face_emotion.analyze_frame(frame)
+                if probs_frame is not None and conf_frame >= 0.3:
+                    state.face_emotion_probs = probs_frame
 
-                def _fe_to_probs(fa_result: dict) -> "np.ndarray":
-                    fe  = fa_result["emotion"]
-                    dom = fa_result.get("dominant_emotion", "neutral")
-                    tot = sum(fe.values()) or 1.0
-
-                    # Step 1 — map raw DeepFace scores to MAFW 11-class
-                    fp = np.zeros(11, dtype=np.float32)
-                    for k, v in fe.items():
-                        if k in _FACE_EMO_MAP:
-                            fp[_FACE_EMO_MAP[k]] = float(v) / tot
-
-                    # Step 2 — temperature T=2.5 to flatten Neutral-heavy distribution
-                    known = [_FACE_EMO_MAP[k] for k in fe if k in _FACE_EMO_MAP]
-                    sub   = fp[known]
-                    log_p = np.log(np.clip(sub, 1e-10, 1.0)) / 2.5
-                    log_p -= log_p.max()
-                    sub   = np.exp(log_p); sub /= sub.sum()
-                    for j, idx in enumerate(known):
-                        fp[idx] = sub[j]
-
-                    # Step 3 — anchor: ensure DeepFace's own dominant_emotion
-                    # actually leads the distribution (fixes anger/fear being
-                    # numerically outscored by neutral in raw scores)
-                    if dom in _FACE_EMO_MAP:
-                        d_idx = _FACE_EMO_MAP[dom]
-                        cur_max = fp.max()
-                        if fp[d_idx] < cur_max:
-                            # give dominant emotion a clear lead
-                            fp[d_idx] = cur_max + 0.08
-                            fp /= fp.sum()
-
-                    return fp
-
-                # Only update if DeepFace found a face (confidence > 0.5)
-                face_conf = fa[0].get("face_confidence", 1.0)
-                if face_conf >= 0.5:
-                    state.face_emotion_probs = _fe_to_probs(fa[0])
-
+                # per-participant emotion from face crops
                 new_per_pid: dict = {}
                 for det in detections:
                     pid2 = det.get("participant_id")
@@ -263,24 +227,16 @@ def _face_loop():
                     x, y, w2, h2 = bbox
                     if w2 > 20 and h2 > 20:
                         crop = frame[max(0,y):y+h2, max(0,x):x+w2]
-                        try:
-                            fa2 = DeepFace.analyze(crop, actions=["emotion"],
-                                                   enforce_detection=False,
-                                                   silent=True,
-                                                   detector_backend="opencv")
-                            conf2 = fa2[0].get("face_confidence", 1.0)
-                            if conf2 >= 0.5:
-                                new_per_pid[pid2] = _fe_to_probs(fa2[0])
-                            else:
-                                new_per_pid[pid2] = state.face_emotion_probs
-                        except Exception:
+                        p2, c2 = face_emotion.analyze_crop(crop)
+                        if p2 is not None and c2 >= 0.3:
+                            new_per_pid[pid2] = p2
+                        else:
                             new_per_pid[pid2] = state.face_emotion_probs
                     else:
                         new_per_pid[pid2] = state.face_emotion_probs
                 state.face_emotion_per_pid = new_per_pid
-            except Exception as _dfe:
-                print(f"[deepface] {str(_dfe)[:120]}")
-                # keep last known face_emotion_probs — don't reset to None
+            except Exception as _fe_err:
+                print(f"[face_emotion] {str(_fe_err)[:120]}")
         except Exception as e:
             print(f"[face_loop] {e}")
 
@@ -363,12 +319,16 @@ def _inference_loop():
 
             if audio_p is not None and face_p is not None and aw > 0 and fw > 0:
                 probs = (aw * audio_p + fw * face_p) / (aw + fw)
+                source = "audio+face"
             elif audio_p is not None and aw > 0:
                 probs = audio_p
+                source = "audio"
             elif face_p is not None and fw > 0:
                 probs = face_p
+                source = "face"
             else:
                 probs = None
+                source = "none"
 
             if probs is None:
                 time.sleep(INFER_EVERY)
@@ -393,6 +353,7 @@ def _inference_loop():
                 rms=round(rms,4), alert=alert,
                 active_speaker=pid,
                 active_speaker_name=pname,
+                source=source,
             )
             state.latest_result = result
 
@@ -1020,30 +981,9 @@ def _yt_face_reader():
             if len(data) < FBYTES:
                 time.sleep(0.1); continue
             frame = np.frombuffer(data, dtype=np.uint8).reshape(H, W, 3)
-            from deepface import DeepFace
-            fa  = DeepFace.analyze(frame, actions=["emotion"],
-                                    enforce_detection=False, silent=True,
-                                    detector_backend="opencv")
-            fc  = fa[0].get("face_confidence", 1.0)
-            if fc >= 0.3:
-                fe  = fa[0]["emotion"]
-                dom = fa[0].get("dominant_emotion", "neutral")
-                fp  = np.zeros(11, dtype=np.float32)
-                tot = sum(fe.values()) or 1.0
-                for k, v in fe.items():
-                    if k in _FACE_EMO_MAP:
-                        fp[_FACE_EMO_MAP[k]] = float(v) / tot
-                known = [_FACE_EMO_MAP[k] for k in fe if k in _FACE_EMO_MAP]
-                sub   = fp[known]
-                lp    = np.log(np.clip(sub, 1e-10, 1.0)) / 2.5
-                lp   -= lp.max(); sub = np.exp(lp); sub /= sub.sum()
-                for j, idx2 in enumerate(known): fp[idx2] = sub[j]
-                if dom in _FACE_EMO_MAP:
-                    di = _FACE_EMO_MAP[dom]
-                    if fp[di] < fp.max():
-                        fp[di] = fp.max() + 0.08; fp /= fp.sum()
-                yt_state.face_probs = fp
-                # Face broadcast disabled — audio-only mode for diagnosis
+            probs_f, conf_f = face_emotion.analyze_frame(frame)
+            if probs_f is not None and conf_f >= 0.3:
+                yt_state.face_probs = probs_f
         except Exception:
             time.sleep(0.3)
 

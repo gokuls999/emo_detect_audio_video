@@ -110,6 +110,17 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .detected-info{flex:1}
 .emo-label{font-size:32px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
 .emo-conf{font-size:14px;color:var(--text-muted);font-weight:500}
+.source-badge{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.source-badge.src-audio{background:#dbeafe;color:#2563eb}
+.source-badge.src-face{background:#dcfce7;color:#16a34a}
+.source-badge.src-both{background:#ede9fe;color:#7c3aed}
+.source-badge.src-none{background:var(--bg-hover);color:var(--text-muted)}
+[data-theme="dark"] .source-badge.src-audio{background:#1e3a5f;color:#60a5fa}
+[data-theme="dark"] .source-badge.src-face{background:#14532d;color:#4ade80}
+[data-theme="dark"] .source-badge.src-both{background:#312e81;color:#a78bfa}
+[data-theme="dark"] .source-badge.src-none{background:var(--bg-hover);color:var(--text-muted)}
+.source-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse-dot 1.5s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* metrics */
 .metrics{display:flex;gap:8px;margin-bottom:12px}
@@ -252,6 +263,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
           <div class="detected-info">
             <div class="emo-label" id="emo-name">Waiting...</div>
             <div class="emo-conf" id="emo-conf">No data yet</div>
+            <div class="source-badge src-none" id="source-badge"><span class="source-dot"></span> Waiting</div>
           </div>
         </div>
 
@@ -401,6 +413,14 @@ function updateUI(d){
   document.getElementById('face-container').innerHTML=faceSVG(d.emotion||'Neutral');
   document.getElementById('emo-name').textContent=d.emotion||'Neutral';
   document.getElementById('emo-conf').textContent=d.confidence!=null?`${(d.confidence*100).toFixed(1)}% confidence`:'No data yet';
+
+  // update prediction source badge
+  const srcBadge=document.getElementById('source-badge');
+  const src=d.mode||d.source||'none';
+  srcBadge.className='source-badge '+(src==='audio+face'?'src-both':src==='audio'?'src-audio':src==='face'||src==='face_only'?'src-face':'src-none');
+  const srcLabels={'audio+face':'Audio + Face','audio':'Audio Only','face':'Face Only','face_only':'Face Only','none':'Waiting'};
+  srcBadge.innerHTML='<span class="source-dot"></span> '+(srcLabels[src]||src);
+
   document.getElementById('stress').textContent=d.stress!=null?(d.stress*100).toFixed(0)+'%':'\u2014';
   document.getElementById('valence').textContent=d.valence!=null?(d.valence>=0?'+':'')+d.valence.toFixed(2):'\u2014';
   document.getElementById('arousal').textContent=d.arousal!=null?d.arousal.toFixed(2):'\u2014';

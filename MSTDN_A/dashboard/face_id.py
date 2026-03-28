@@ -1,7 +1,7 @@
 """
 Face detection + recognition for MSTDN-A Dashboard.
-Uses OpenCV Haar Cascade for detection and histogram-based embeddings
-for lightweight face identification (no deepface/tensorflow required).
+Uses InsightFace (ArcFace/buffalo_l) for accurate face detection & embeddings.
+Runs on ONNX Runtime — no tensorflow required.
 """
 from __future__ import annotations
 import threading
@@ -10,65 +10,53 @@ import cv2
 
 _lock = threading.Lock()
 _model_ready = False
-_face_cascade: cv2.CascadeClassifier | None = None
+_face_app = None
 
 THRESHOLD = 0.40   # cosine distance threshold (lower = more strict)
-EMBED_SIZE = 64     # resize face crop to this square before embedding
 
 
 def _ensure_model():
-    global _model_ready, _face_cascade
+    global _model_ready, _face_app
     if _model_ready:
         return
-    try:
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        _face_cascade = cv2.CascadeClassifier(cascade_path)
-        if _face_cascade.empty():
-            raise RuntimeError("Failed to load Haar cascade")
-        _model_ready = True
-        print("[face_id] OpenCV Haar cascade ready.")
-    except Exception as e:
-        print(f"[face_id] Model warm-up failed: {e}")
-
-
-def _compute_embedding(face_bgr: np.ndarray) -> np.ndarray:
-    """Convert a face crop into a normalized embedding vector."""
-    gray = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2GRAY)
-    resized = cv2.resize(gray, (EMBED_SIZE, EMBED_SIZE))
-    # histogram equalize for lighting invariance
-    equalized = cv2.equalizeHist(resized)
-    emb = equalized.flatten().astype(np.float32)
-    norm = np.linalg.norm(emb) + 1e-8
-    return emb / norm
+    with _lock:
+        if _model_ready:
+            return
+        try:
+            from insightface.app import FaceAnalysis
+            _face_app = FaceAnalysis(
+                name="buffalo_l",
+                providers=["CPUExecutionProvider"],
+            )
+            _face_app.prepare(ctx_id=-1, det_size=(640, 640))
+            _model_ready = True
+            print("[face_id] InsightFace ArcFace model ready.")
+        except Exception as e:
+            print(f"[face_id] Model warm-up failed: {str(e).encode('ascii', 'replace').decode()}")
 
 
 def extract_embedding(frame_bgr: np.ndarray) -> np.ndarray | None:
-    """Extract face embedding from frame. Returns None if no face found."""
+    """Extract ArcFace embedding from the largest face in frame."""
     _ensure_model()
-    if _face_cascade is None:
+    if _face_app is None:
         return None
 
-    gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-    faces = _face_cascade.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
-    )
-    if len(faces) == 0:
+    faces = _face_app.get(frame_bgr)
+    if not faces:
         return None
 
-    # pick largest face
-    areas = [w * h for (x, y, w, h) in faces]
-    idx = int(np.argmax(areas))
-    x, y, w, h = faces[idx]
+    # pick largest face by bounding box area
+    best = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
 
-    # reject if face region covers >85% of frame (likely no real face)
-    fh, fw = frame_bgr.shape[:2]
-    if (w * h) > (fw * fh * 0.85):
+    # reject if face region covers >85% of frame (likely false positive)
+    h_img, w_img = frame_bgr.shape[:2]
+    fw = best.bbox[2] - best.bbox[0]
+    fh = best.bbox[3] - best.bbox[1]
+    if (fw * fh) > (w_img * h_img * 0.85):
         return None
 
-    crop = frame_bgr[max(0, y):y+h, max(0, x):x+w]
-    if crop.size == 0:
-        return None
-    return _compute_embedding(crop)
+    emb = best.embedding.astype(np.float32)
+    return emb / (np.linalg.norm(emb) + 1e-8)
 
 
 def detect_faces(frame_bgr: np.ndarray) -> list[dict]:
@@ -77,27 +65,31 @@ def detect_faces(frame_bgr: np.ndarray) -> list[dict]:
       {"bbox": (x,y,w,h), "embedding": np.ndarray | None, "crop": np.ndarray}
     """
     _ensure_model()
-    if _face_cascade is None:
+    if _face_app is None:
         return []
 
-    gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-    detections = _face_cascade.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
-    )
-    if len(detections) == 0:
+    faces = _face_app.get(frame_bgr)
+    if not faces:
         return []
 
-    fh, fw = frame_bgr.shape[:2]
-    faces = []
-    for (x, y, w, h) in detections:
+    h_img, w_img = frame_bgr.shape[:2]
+    result = []
+    for f in faces:
+        x1, y1, x2, y2 = [int(v) for v in f.bbox]
+        w = x2 - x1
+        h = y2 - y1
         # skip if region is too large (whole-frame false positive)
-        if (w * h) > (fw * fh * 0.85):
+        if (w * h) > (w_img * h_img * 0.85):
             continue
-        crop = frame_bgr[max(0, y):y+h, max(0, x):x+w]
-        emb = _compute_embedding(crop) if crop.size > 0 else None
-        faces.append({"bbox": (int(x), int(y), int(w), int(h)),
-                       "embedding": emb, "crop": crop})
-    return faces
+        emb = f.embedding.astype(np.float32)
+        emb = emb / (np.linalg.norm(emb) + 1e-8)
+        crop = frame_bgr[max(0, y1):y2, max(0, x1):x2] if w > 0 else None
+        result.append({
+            "bbox": (x1, y1, w, h),
+            "embedding": emb,
+            "crop": crop,
+        })
+    return result
 
 
 def cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
