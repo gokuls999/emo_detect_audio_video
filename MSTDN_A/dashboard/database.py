@@ -280,8 +280,13 @@ def get_face_embeddings() -> list[dict]:
     result = []
     for r in rows:
         emb = np.frombuffer(r["embedding"], dtype=np.float32).copy()
-        result.append({"participant_id": r["participant_id"],
-                       "name": r["name"], "embedding": emb})
+        # Only load 512-dim InsightFace ArcFace embeddings; skip stale ones
+        if emb.shape[0] == 512:
+            result.append({"participant_id": r["participant_id"],
+                           "name": r["name"], "embedding": emb})
+        else:
+            print(f"[face_db] Skipping stale embedding for pid={r['participant_id']} "
+                  f"(dim={emb.shape[0]}, expected 512)")
     return result
 
 def has_face(participant_id: int) -> bool:

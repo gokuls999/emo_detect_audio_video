@@ -747,16 +747,23 @@ async function loadFaceStatuses(){
 async function registerFace(pid,event){
   event.stopPropagation();
   const btn=event.target.closest("button");
-  if(btn){btn.disabled=true;btn.textContent="Capturing...";}
+  const origHTML=btn?btn.innerHTML:'';
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i> Capturing...';}
   try{
     const r=await fetch(`/api/participants/${pid}/register_face`,{method:"POST"});
     if(!r.ok){
       const e=await r.json();
       showToast(e.detail||"Face registration failed","danger");
+      if(btn){btn.innerHTML=origHTML;}
     } else {
+      const d=await r.json();
+      showToast("Face registered for "+(d.name||"participant"),"success");
       faceStatus[pid]=true;
       renderParticipants();
     }
+  }catch(err){
+    showToast("Network error: "+err.message,"danger");
+    if(btn){btn.innerHTML=origHTML;}
   }finally{
     if(btn){btn.disabled=false;}
   }
