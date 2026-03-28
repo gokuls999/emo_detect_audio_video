@@ -184,7 +184,7 @@ def _face_loop():
             if frame is None:
                 continue
 
-            # ── face ID (only when registered faces exist) ────────────────
+            # ── face detection — always runs; face ID runs when registered ──
             detections = []
             if state.registered_faces:
                 detections = face_id.identify_all(frame, state.registered_faces)
@@ -209,32 +209,45 @@ def _face_loop():
                                 "name": d["name"],
                                 "distance": round(d["distance"], 3)} for d in detections]
                 })
+            else:
+                # No registered faces — still detect faces for emotion analysis
+                raw_faces = face_id.detect_faces(frame)
+                if raw_faces:
+                    detections = [{"bbox": f["bbox"], "participant_id": None,
+                                   "name": "Unknown", "distance": 1.0,
+                                   "embedding": f["embedding"]} for f in raw_faces]
+                    state.detected_faces = detections
 
             # ── face emotion analysis (ONNX FERPlus) — always runs ──
             try:
-                # whole-frame emotion (fallback for unregistered faces)
-                probs_frame, conf_frame = face_emotion.analyze_frame(frame)
-                if probs_frame is not None and conf_frame >= 0.3:
-                    state.face_emotion_probs = probs_frame
-
-                # per-participant emotion from face crops
                 new_per_pid: dict = {}
-                for det in detections:
-                    pid2 = det.get("participant_id")
-                    if pid2 is None:
-                        continue
-                    bbox = det.get("bbox", (0, 0, 0, 0))
-                    x, y, w2, h2 = bbox
-                    if w2 > 20 and h2 > 20:
-                        crop = frame[max(0,y):y+h2, max(0,x):x+w2]
-                        p2, c2 = face_emotion.analyze_crop(crop)
-                        if p2 is not None and c2 >= 0.3:
-                            new_per_pid[pid2] = p2
-                        else:
-                            new_per_pid[pid2] = state.face_emotion_probs
-                    else:
-                        new_per_pid[pid2] = state.face_emotion_probs
+
+                if detections:
+                    # Use InsightFace crops directly — more reliable than re-detecting
+                    for det in detections:
+                        bbox = det.get("bbox", (0, 0, 0, 0))
+                        x, y, w2, h2 = bbox
+                        if w2 > 20 and h2 > 20:
+                            crop = frame[max(0,y):y+h2, max(0,x):x+w2]
+                            p2, c2 = face_emotion.analyze_crop(crop)
+                            if p2 is not None:
+                                # Update global face emotion (used as fallback)
+                                state.face_emotion_probs = p2
+                                pid2 = det.get("participant_id")
+                                if pid2 is not None:
+                                    new_per_pid[pid2] = p2
+                else:
+                    # No InsightFace detections — try whole-frame with Haar cascade
+                    probs_frame, conf_frame = face_emotion.analyze_frame(frame)
+                    if probs_frame is not None:
+                        state.face_emotion_probs = probs_frame
+
                 state.face_emotion_per_pid = new_per_pid
+
+                # Broadcast face emotion status so UI knows face is active
+                has_face_emo = state.face_emotion_probs is not None
+                broadcast_from_thread({"type": "face_emotion_status",
+                                       "active": has_face_emo})
             except Exception as _fe_err:
                 print(f"[face_emotion] {str(_fe_err)[:120]}")
         except Exception as e:
