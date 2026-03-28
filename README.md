@@ -177,13 +177,13 @@ Additional fine-tuning used English audio emotion datasets:
 
 For each detected person/audio stream, the system produces:
 
-| Output | Description |
-|--------|-------------|
-| Primary Emotion | Top-1 predicted emotion (11 classes) |
-| Emotion Distribution | Probability across all 11 emotions |
-| Stress Score | 0.0–1.0 continuous stress level |
-| Valence | Positive/negative emotional polarity |
-| Arousal | Low/high emotional activation |
+|       Output         |           Description                |
+|----------------------|--------------------------------------|
+| Primary Emotion      | Top-1 predicted emotion (11 classes) |
+| Emotion Distribution | Probability across all 11 emotions   |
+| Stress Score         | 0.0–1.0 continuous stress level      |
+| Valence              | Positive/negative emotional polarity |
+| Arousal              | Low/high emotional activation        |
 
 ## Tech Stack
 
