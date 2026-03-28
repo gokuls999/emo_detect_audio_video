@@ -789,6 +789,10 @@ class YTState:
     # Auto-learn
     auto_learn:        bool        = False  # auto teach from own predictions
     last_auto_teach:   float       = 0.0   # throttle timer
+    # History for PDF report
+    history:           list        = []     # list of inference result dicts (capped at 1000)
+    _url:              str         = ""     # current YouTube URL
+    _title:            str         = ""     # current YouTube title
 
 yt_state  = YTState()
 yt_state.teach_lock = threading.Lock()
@@ -1095,6 +1099,10 @@ def _yt_infer():
             yt_state.latest = result
             _yt_bcast_sync(result)
 
+            # Accumulate for PDF report (cap at 1000)
+            if len(yt_state.history) < 1000:
+                yt_state.history.append(result)
+
             # Auto-learn: always runs when video is playing and confidence is high enough
             if float(probs[idx]) >= AUTO_LEARN_CONF_THRESHOLD:
                 threading.Thread(target=_auto_teach, args=(idx,), daemon=True).start()
@@ -1197,6 +1205,9 @@ def yt_load(body: YTLoadIn):
         yt_state.muted      = False
         yt_state.face_probs = None
         yt_state.stress_ema = 0.2  # reset stress on every new load
+        yt_state._url       = body.url
+        yt_state._title     = title
+        yt_state.history    = []   # fresh history for new video
         return {"ok": True, "video_id": vid_id, "title": title}
     except Exception as e:
         print(f"[yt_load] ERROR: {e}")
@@ -1273,6 +1284,47 @@ def yt_teach_status():
         "checkpoint": str(ONLINE_CKPT),
         "auto_learn": yt_state.auto_learn,
     }
+
+@app.get("/api/yt/report")
+def yt_report():
+    """Generate and download a PDF report for the current YT session."""
+    import tempfile
+    from dashboard.pdf_report import export_yt_pdf
+
+    history = yt_state.history
+    if not history:
+        raise HTTPException(400, "No readings to export — load and play a video first")
+
+    # Build data dict for export_yt_pdf
+    emotions = [r["emotion"] for r in history]
+    from collections import Counter
+    emo_counts = Counter(emotions)
+    dominant = emo_counts.most_common(1)[0][0]
+    stresses  = [r["stress"]    for r in history]
+    valences  = [r["valence"]   for r in history]
+    arousals  = [r["arousal"]   for r in history]
+    confs     = [r["confidence"] for r in history]
+
+    data = {
+        "url":            yt_state._url,
+        "title":          yt_state._title,
+        "readings":       len(history),
+        "teach_count":    yt_state.teach_count,
+        "dominant":       dominant,
+        "mean_stress":    sum(stresses) / len(stresses),
+        "mean_valence":   sum(valences) / len(valences),
+        "mean_arousal":   sum(arousals) / len(arousals),
+        "mean_confidence": sum(confs) / len(confs),
+        "emotion_counts": dict(emo_counts),
+        "stress_series":  stresses,
+        "history":        history,
+    }
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    tmp.close()
+    export_yt_pdf(data, tmp.name)
+    return FileResponse(tmp.name, media_type="application/pdf",
+                        filename=f"MSTDN_YT_Report.pdf")
 
 class AutoLearnIn(BaseModel):
     enabled: bool

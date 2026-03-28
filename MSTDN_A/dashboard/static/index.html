@@ -1,451 +1,569 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MSTDN-A · Emotion Intelligence Dashboard</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<title>MSTDN-A | Emotion Intelligence Dashboard</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
 :root{
-  --bg:#0d1117;--card:#161b22;--border:#30363d;
-  --text:#c9d1d9;--muted:#8b949e;--accent:#58a6ff;
-  --green:#3fb950;--yellow:#d29922;--red:#f85149;
-  --purple:#8957e5;
+  --bg:#f5f6f8;--bg-card:#fff;--bg-input:#f8fafc;--bg-hover:#f1f5f9;
+  --text:#1a1a2e;--text-sec:#64748b;--text-muted:#94a3b8;--text-inv:#475569;
+  --border:#e2e5e9;--border-light:#f1f5f9;
+  --accent:#6366f1;--accent-light:#818cf8;--accent-bg:#ede9fe;
+  --success:#22c55e;--success-bg:#dcfce7;--success-deep:#16a34a;
+  --danger:#ef4444;--danger-bg:#fef2f2;--danger-border:#fecaca;--danger-text:#dc2626;
+  --warn:#d97706;--warn-bg:#fef3c7;
+  --purple:#7c3aed;--purple-bg:#ede9fe;
 }
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;margin:0;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
 
-/* ── top bar ── */
-.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
-.topbar .brand{font-size:1.1rem;font-weight:700;color:var(--accent);letter-spacing:1px}
-.topbar .brand span{color:var(--text);font-weight:400}
-.topbar .session-badge{background:#21262d;border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:.8rem;color:var(--muted)}
-.topbar .session-badge.live{border-color:var(--green);color:var(--green)}
-#timer{font-variant-numeric:tabular-nums;font-size:.85rem;color:var(--muted)}
+/* top nav */
+.topnav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 20px;height:44px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:100}
+.topnav-left{display:flex;align-items:center;gap:12px}
+.topnav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.logo{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.logo span{color:var(--accent);font-weight:800}
+.nav-divider{width:1px;height:20px;background:var(--border)}
+.nav-label{font-size:12px;color:var(--text-sec);font-weight:500}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.3px}
+.status-idle{background:var(--bg-hover);color:var(--text-muted)}
+.status-live{background:var(--success-bg);color:var(--success-deep)}
+.status-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+#timer{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-muted);font-weight:500}
 
-/* ── layout ── */
-.layout{display:grid;grid-template-columns:280px 1fr 320px;height:calc(100vh - 55px)}
-
-/* ── left sidebar ── */
-.sidebar{background:var(--card);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
-.sidebar-head{padding:14px 16px;border-bottom:1px solid var(--border);font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.participant-card{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative}
-.participant-card:hover{background:#1c2128}
-.participant-card.active-speaker{background:#1a2535;border-left:3px solid var(--accent)}
-.participant-card .p-name{font-weight:600;font-size:.9rem}
-.participant-card .p-role{font-size:.75rem;color:var(--muted)}
-.participant-card .p-emotion{font-size:.8rem;margin-top:4px}
-.participant-card .stress-mini{height:4px;border-radius:2px;margin-top:6px;background:#21262d;overflow:hidden}
-.participant-card .stress-fill{height:100%;border-radius:2px;transition:width .5s}
-.no-participants{padding:24px 16px;text-align:center;color:var(--muted);font-size:.85rem}
-
-/* ── main ── */
-.main{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-
-/* video + current emotion row */
-.top-row{display:grid;grid-template-columns:1fr 340px;gap:16px}
-.video-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
-.video-wrap img{width:100%;height:100%;object-fit:cover}
-.video-placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);flex-direction:column;gap:8px}
-.video-label{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);padding:4px 10px;border-radius:6px;font-size:.75rem;color:var(--green)}
-.video-rms{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.6);padding:4px 10px;border-radius:6px;font-size:.75rem;display:flex;align-items:center;gap:6px}
-.rms-bar{display:flex;gap:2px;align-items:flex-end;height:16px}
-.rms-bar span{width:4px;background:var(--green);border-radius:1px;transition:height .2s}
-
-.emotion-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
-.emotion-panel .emo-label{font-size:2.4rem;font-weight:800;letter-spacing:-1px;transition:color .4s}
-.emotion-panel .emo-emoji{font-size:2rem}
-.emotion-panel .conf-text{font-size:.8rem;color:var(--muted)}
-.metric-row{display:flex;gap:8px}
-.metric-box{flex:1;background:#21262d;border-radius:8px;padding:10px;text-align:center}
-.metric-box .val{font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums}
-.metric-box .lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px}
-.prob-bars{display:flex;flex-direction:column;gap:4px}
-.prob-row{display:flex;align-items:center;gap:6px;font-size:.72rem}
-.prob-row .pname{width:90px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.prob-row .pbar-wrap{flex:1;height:8px;background:#21262d;border-radius:4px;overflow:hidden}
-.prob-row .pbar-fill{height:100%;border-radius:4px;transition:width .4s}
-.prob-row .pval{width:32px;text-align:right;color:var(--muted)}
-
-/* participant grid */
-.grid-title{font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
-.p-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.p-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .3s,box-shadow .3s;cursor:pointer}
-.p-card:hover{border-color:var(--accent)}
-.p-card.focused{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.p-card.alert{border-color:var(--red);box-shadow:0 0 0 1px var(--red),0 0 16px rgba(248,81,73,.2)}
-.p-card .avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;margin-bottom:10px}
-.p-card .pn{font-weight:600;font-size:.9rem}
-.p-card .pr{font-size:.72rem;color:var(--muted)}
-.p-card .pe{margin-top:6px;font-size:.85rem}
-.p-card .stress-bar{height:5px;border-radius:3px;background:#21262d;overflow:hidden;margin-top:8px}
-.p-card .stress-fill{height:100%;border-radius:3px;transition:width .5s}
-.p-card canvas{margin-top:10px;border-radius:4px}
-
-/* ── right panel ── */
-.right-panel{background:var(--card);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
-.right-panel .rp-section{padding:14px 16px;border-bottom:1px solid var(--border)}
-.rp-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stat-cell{background:#21262d;border-radius:8px;padding:10px;text-align:center}
-.stat-cell .sv{font-size:1.3rem;font-weight:700}
-.stat-cell .sl{font-size:.65rem;text-transform:uppercase;color:var(--muted);margin-top:2px}
-.alert-item{background:#21262d;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:.78rem;border-left:3px solid var(--red)}
-.alert-item .at{color:var(--red);font-weight:600}
-.alert-item .am{color:var(--muted);margin-top:2px}
-.history-list .h-item{padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem}
-.history-list .h-item:last-child{border:none}
-.badge-emotion{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600}
-.chart-wrap{padding:12px 16px}
-
-/* ── modals ── */
-.modal-content{background:var(--card);border:1px solid var(--border)}
-.form-control,.form-select{background:#21262d;border-color:var(--border);color:var(--text)}
-.form-control:focus,.form-select:focus{background:#21262d;border-color:var(--accent);color:var(--text);box-shadow:0 0 0 .2rem rgba(88,166,255,.2)}
-
-/* ── alerts ── */
-.alert-toast{position:fixed;top:70px;right:20px;z-index:999;min-width:300px;animation:slideIn .3s}
-@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
-
-/* face recognition */
-.face-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.68rem;font-weight:600}
-.face-badge.registered{background:rgba(63,185,80,.15);color:var(--green);border:1px solid var(--green)}
-.face-badge.not-registered{background:rgba(139,148,158,.1);color:var(--muted);border:1px solid var(--border)}
-.face-badge.detected{background:rgba(88,166,255,.2);color:var(--accent);border:1px solid var(--accent)}
-.face-indicator{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.75);
-  padding:6px 12px;border-radius:8px;font-size:.75rem;max-width:200px}
-.face-indicator .fi-name{color:var(--accent);font-weight:600}
-.register-face-btn{font-size:.68rem;padding:2px 8px;border-radius:6px}
-
-/* ── no session screen ── */
-#no-session{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:16px;grid-column:1/-1}
-.start-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:480px;text-align:center}
-.start-card h2{font-size:1.5rem;font-weight:700;margin-bottom:8px}
-.start-card p{color:var(--muted);font-size:.9rem;margin-bottom:24px}
-
-/* ── tabs in right panel ── */
-.rp-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 4px}
-.rp-tab{flex:1;text-align:center;padding:10px;font-size:.78rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s}
-.rp-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-
-/* ── mic wave ── */
+/* mic wave */
+.mic-section{display:flex;align-items:center;gap:10px}
+.mic-group{display:flex;align-items:center;gap:3px}
+.mic-group .mic-label{font-size:10px;color:var(--text-muted);font-weight:600}
 .mic-wave{display:flex;align-items:center;gap:2px;height:18px}
-.mic-wave span{
-  display:block;width:3px;border-radius:2px;
-  background:var(--border);
-  transition:height .1s ease,background .2s;
-  height:4px;
-}
-/* idle breathing — only when mic is ON and silent */
+.mic-wave span{display:block;width:3px;border-radius:2px;background:var(--border);transition:height .1s ease,background .2s;height:4px}
 @keyframes micBreath{0%,100%{height:4px}50%{height:10px}}
-.mic-wave.idle span{animation:micBreath 2s ease-in-out infinite;background:#4a5568}
+.mic-wave.idle span{animation:micBreath 2s ease-in-out infinite;background:var(--text-muted)}
 .mic-wave.idle span:nth-child(2){animation-delay:.3s}
 .mic-wave.idle span:nth-child(3){animation-delay:.6s}
 .mic-wave.idle span:nth-child(4){animation-delay:.3s}
-/* active = sound detected */
-.mic-wave.active span{animation:none;background:var(--green)}
-.mic-wave.loud  span{animation:none;background:var(--red)}
-/* off = mic not connected */
-.mic-wave.off span{animation:none;height:3px;background:#2a2e35;opacity:.5}
+.mic-wave.active span{animation:none;background:var(--success)}
+.mic-wave.loud span{animation:none;background:var(--danger)}
+.mic-wave.off span{animation:none;height:3px;background:var(--border);opacity:.5}
+
+/* nav buttons */
+.nav-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.nav-btn-success{background:var(--success);color:#fff;border-color:var(--success)}
+.nav-btn-success:hover{background:var(--success-deep);border-color:var(--success-deep);color:#fff}
+.nav-btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.nav-btn-danger:hover{opacity:.9;color:#fff}
+.nav-link{color:var(--accent);text-decoration:none;font-size:11px;font-weight:500}
+.nav-link:hover{text-decoration:underline}
+
+/* face-id toggle */
+.face-toggle{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sec);cursor:pointer}
+.face-toggle input[type="checkbox"]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+
+/* layout */
+.layout{flex:1;display:grid;grid-template-columns:55% 45%;grid-template-rows:1fr 1fr;overflow:hidden;min-height:0}
+.hidden{display:none!important}
+
+/* no-session screen */
+#no-session{grid-column:1/-1;grid-row:1/-1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.start-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:36px;max-width:440px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.start-card h2{font-size:1.3rem;font-weight:700;margin-bottom:6px;color:var(--text)}
+.start-card p{color:var(--text-muted);font-size:.85rem;margin-bottom:20px}
+.start-card .btn-primary-lg{width:100%;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
+.start-card .btn-primary-lg:hover{opacity:.9}
+.start-card .btn-outline-lg{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);font-size:13px;font-weight:500;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.start-card .btn-outline-lg:hover{border-color:var(--accent);color:var(--accent)}
+
+/* top-left: video */
+.video-cell{padding:10px;display:flex;flex-direction:column;overflow:hidden}
+.video-wrap{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;flex:1;min-height:0;max-height:40vh;display:flex;align-items:center;justify-content:center}
+.video-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.video-placeholder{display:flex;align-items:center;justify-content:center;height:100%;width:100%;color:var(--text-muted);flex-direction:column;gap:6px;font-size:13px}
+.video-label{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:5px;font-size:10px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px}
+.video-rms{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:5px;font-size:10px;display:flex;align-items:center;gap:5px;color:#fff}
+.rms-bar{display:flex;gap:2px;align-items:flex-end;height:14px}
+.rms-bar span{width:3px;background:var(--success);border-radius:1px;transition:height .2s}
+.face-indicator{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);padding:5px 10px;border-radius:6px;font-size:11px;display:none}
+.face-indicator .fi-label{color:var(--text-muted);font-size:9px}
+.face-indicator .fi-name{color:var(--accent);font-weight:600}
+.face-indicator .fi-conf{color:var(--text-muted);font-size:10px}
+
+/* top-right: emotion panel */
+.emotion-cell{padding:10px 10px 10px 0;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.emotion-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.emo-accent{height:3px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:background .3s}
+.emo-body{padding:10px 14px}
+
+.detected-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.face-icon{width:52px;height:52px;flex-shrink:0}
+.face-icon circle,.face-icon ellipse,.face-icon path,.face-icon line{transition:all .3s}
+.detected-info{flex:1}
+.emo-label{font-size:22px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
+.emo-conf{font-size:11px;color:var(--text-muted);font-weight:500}
+
+.metrics{display:flex;gap:6px;margin-bottom:8px}
+.metric-card{flex:1;background:var(--bg-input);border-radius:6px;padding:5px 8px;text-align:center;border:1px solid var(--border-light)}
+.metric-label{font-size:9px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.metric-val{font-size:14px;font-weight:700}
+.metric-stress .metric-val{color:#ef4444}
+.metric-valence .metric-val{color:#22c55e}
+.metric-arousal .metric-val{color:#f59e0b}
+
+.alert-banner{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger-text);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;margin-bottom:6px;display:none;text-align:center}
+
+.dist-section{margin-bottom:4px}
+.dist-title{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px}
+.dist-row{display:grid;grid-template-columns:72px 1fr 28px;align-items:center;gap:4px;margin-bottom:2px}
+.dist-label{font-size:10px;color:var(--text-inv);text-align:right;font-weight:500}
+.dist-track{height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
+.dist-fill{height:100%;border-radius:3px;transition:width .4s}
+.dist-pct{font-size:9px;color:var(--text-muted);text-align:right;font-family:monospace}
+
+/* bottom-left: participants */
+.participants-cell{padding:0 10px 10px;display:flex;flex-direction:column;overflow:hidden}
+.participants-head{display:flex;align-items:center;justify-content:space-between;padding:6px 0;flex-shrink:0}
+.participants-head .ph-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted)}
+.participants-list{flex:1;overflow-y:auto;min-height:0}
+.no-participants{padding:16px;text-align:center;color:var(--text-muted);font-size:12px}
+
+.participant-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px}
+.participant-card:hover{border-color:var(--accent)}
+.participant-card.active-speaker{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.participant-card.stress-alert{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger),0 0 10px rgba(239,68,68,.15)}
+.p-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0}
+.p-info{flex:1;min-width:0}
+.p-name{font-weight:600;font-size:12px;display:flex;align-items:center;gap:4px}
+.p-role{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-emotion-line{font-size:11px;margin-top:2px;display:flex;align-items:center;gap:4px}
+.p-stress-bar{height:3px;border-radius:2px;background:var(--bg-hover);overflow:hidden;margin-top:3px}
+.p-stress-fill{height:100%;border-radius:2px;transition:width .5s}
+.p-actions{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.p-face-badge{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600}
+.p-face-badge.registered{background:var(--success-bg);color:var(--success-deep)}
+.p-face-badge.not-registered{background:var(--bg-hover);color:var(--text-muted)}
+.p-btn-sm{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:10px;padding:2px 4px}
+.p-btn-sm:hover{color:var(--danger)}
+
+.focus-bar{padding:6px 0;border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px}
+.focus-bar label{font-size:10px;color:var(--text-muted);font-weight:600;white-space:nowrap}
+.focus-select{flex:1;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);font-size:11px;outline:none}
+.focus-select:focus{border-color:var(--accent)}
+
+/* bottom-right: tabs */
+.tabs-cell{padding:0 10px 10px 0;display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab-btn{flex:1;text-align:center;padding:7px;font-size:11px;cursor:pointer;color:var(--text-muted);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text)}
+.tab-content{flex:1;overflow-y:auto;min-height:0;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px}
+
+/* teach panel */
+.teach-section{margin-bottom:6px}
+.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.teach-title{font-size:10px;font-weight:600;color:var(--text-inv);letter-spacing:.3px;text-transform:uppercase}
+.teach-count{font-size:10px;color:var(--accent);font-weight:600}
+.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.teach-btn{padding:5px 4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:10px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
+.teach-btn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.teach-btn:active{transform:scale(.97)}
+.teach-btn.taught{border-color:var(--success);background:var(--success-bg);color:var(--success-deep);animation:pulse .4s}
+.teach-face{width:18px;height:18px;display:block;margin:0 auto 2px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}100%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+.teach-feedback{font-size:10px;color:var(--text-muted);margin-top:4px;min-height:14px;text-align:center}
+.teach-footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.teach-buffer{font-size:10px;color:var(--text-muted)}
+.btn-save{padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-inv);cursor:pointer;font-size:10px;font-weight:600}
+.btn-save:hover{border-color:var(--accent);color:var(--accent)}
+
+/* analytics tab */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.stat-cell{background:var(--bg-input);border-radius:6px;padding:8px;text-align:center;border:1px solid var(--border-light)}
+.stat-cell .sv{font-size:14px;font-weight:700}
+.stat-cell .sl{font-size:9px;text-transform:uppercase;color:var(--text-muted);margin-top:1px;letter-spacing:.3px}
+.chart-section{margin-bottom:10px}
+.chart-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+
+/* alerts tab */
+.alert-item{background:var(--bg-input);border-radius:6px;padding:7px 10px;margin-bottom:5px;font-size:11px;border-left:3px solid var(--danger)}
+.alert-item .at{color:var(--danger-text);font-weight:600;font-size:11px}
+.alert-item .am{color:var(--text-muted);margin-top:2px;font-size:10px}
+
+/* sessions tab */
+.h-item{padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.h-item:last-child{border:none}
+.h-item-name{font-weight:600;font-size:12px}
+.h-item-date{font-size:10px;color:var(--text-muted)}
+.export-btn{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:10px;font-weight:500;margin-top:3px;display:inline-flex;align-items:center;gap:3px;transition:all .12s}
+.export-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* modal overlay */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+.modal-box.wide{max-width:640px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-head h3{font-size:15px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:16px 18px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border)}
+
+/* form controls */
+.form-group{margin-bottom:10px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:4px}
+.form-label .req{color:var(--danger)}
+.form-input{width:100%;padding:7px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);font-size:13px;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text-muted)}
+.form-row{display:flex;gap:6px;margin-top:6px}
+.form-row .form-input{flex:1}
+.form-hint{font-size:10px;color:var(--text-muted);margin-top:4px}
+.modal-p-item{display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg-input);border-radius:5px;margin-bottom:4px;font-size:12px}
+.modal-p-item .mp-name{flex:1;font-weight:600}
+.modal-p-item .mp-role{color:var(--text-muted)}
+.modal-p-item button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px}
+.modal-p-item button:hover{color:var(--danger)}
+
+.btn-primary{padding:7px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn-primary:hover{opacity:.9}
+.btn-secondary{padding:7px 16px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+
+/* toast */
+.alert-toast{position:fixed;top:52px;right:16px;z-index:300;min-width:280px;max-width:380px;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.1);animation:slideIn .3s;display:flex;align-items:center;gap:8px}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.toast-success{background:var(--success-bg);color:var(--success-deep);border:1px solid #bbf7d0}
+.toast-danger{background:var(--danger-bg);color:var(--danger-text);border:1px solid var(--danger-border)}
+.toast-info{background:var(--accent-bg);color:var(--accent);border:1px solid #c7d2fe}
+.toast-secondary{background:var(--bg-hover);color:var(--text-sec);border:1px solid var(--border)}
+.toast-close{background:none;border:none;color:inherit;cursor:pointer;font-size:14px;margin-left:auto;opacity:.6}
+.toast-close:hover{opacity:1}
 
 /* scrollbar */
-::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 </style>
 </head>
 <body>
 
-<!-- ══ TOP BAR ══ -->
-<div class="topbar">
-  <div class="brand">MSTDN<span>-A</span></div>
-  <div class="brand" style="font-size:.75rem;color:var(--muted);font-weight:400">Emotion Intelligence Dashboard</div>
-  <div id="session-badge" class="session-badge">No Session</div>
-  <div id="timer" class="ms-2">--:--:--</div>
-  <!-- ── dual mic indicators ── -->
-  <div class="d-flex align-items-center gap-3 ms-3">
-    <div class="d-flex align-items-center gap-1" title="Microphone 1 (USB)">
-      <i class="bi bi-mic-fill" id="mic1-icon" style="font-size:.8rem;color:var(--muted)"></i>
-      <div class="mic-wave" id="mic1-wave">
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
-      <span style="font-size:.65rem;color:var(--muted)">M1</span>
+<!-- TOP NAV -->
+<div class="topnav">
+  <div class="topnav-left">
+    <div class="logo"><span>MSTDN</span>-A</div>
+    <div class="nav-divider"></div>
+    <div class="nav-label">Dashboard</div>
+    <div class="status-chip status-idle" id="session-badge">
+      <div class="status-dot"></div>
+      <span id="session-badge-text">No Session</span>
     </div>
-    <div class="d-flex align-items-center gap-1" title="Microphone 2 (3.5mm)">
-      <i class="bi bi-mic-fill" id="mic2-icon" style="font-size:.8rem;color:var(--muted)"></i>
-      <div class="mic-wave" id="mic2-wave">
-        <span></span><span></span><span></span><span></span><span></span>
+    <div id="timer">--:--:--</div>
+
+    <div class="mic-section">
+      <div class="mic-group" title="Microphone 1 (USB)">
+        <i class="bi bi-mic-fill" id="mic1-icon" style="font-size:11px;color:var(--text-muted)"></i>
+        <div class="mic-wave off" id="mic1-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <span class="mic-label">M1</span>
       </div>
-      <span style="font-size:.65rem;color:var(--muted)">M2</span>
+      <div class="mic-group" title="Microphone 2 (3.5mm)">
+        <i class="bi bi-mic-fill" id="mic2-icon" style="font-size:11px;color:var(--text-muted)"></i>
+        <div class="mic-wave off" id="mic2-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <span class="mic-label">M2</span>
+      </div>
     </div>
   </div>
-  <div class="ms-auto d-flex gap-2">
-    <button class="btn btn-sm btn-outline-secondary" onclick="showHistory()"><i class="bi bi-clock-history"></i> History</button>
-    <div class="form-check form-switch d-flex align-items-center gap-2 mb-0 ms-2" title="Auto-identify people by face">
-      <input class="form-check-input" type="checkbox" id="face-auto-toggle" checked onchange="fetch('/api/face/auto/'+this.checked,{method:'POST'})">
-      <label class="form-check-label" for="face-auto-toggle" style="font-size:.78rem;white-space:nowrap"><i class="bi bi-person-bounding-box me-1"></i>Face ID</label>
-    </div>
-    <button id="btn-start" class="btn btn-sm btn-success" onclick="showStartModal()"><i class="bi bi-play-fill"></i> Start Session</button>
-    <button id="btn-stop"  class="btn btn-sm btn-danger d-none" onclick="stopSession()"><i class="bi bi-stop-fill"></i> End Session</button>
+
+  <div class="topnav-right">
+    <label class="face-toggle" title="Auto-identify people by face">
+      <input type="checkbox" id="face-auto-toggle" checked onchange="fetch('/api/face/auto/'+this.checked,{method:'POST'})"/>
+      <i class="bi bi-person-bounding-box"></i>
+      Face ID
+    </label>
+    <div class="nav-divider"></div>
+    <button class="nav-btn" onclick="if(sessionId) window.open('/api/session/'+sessionId+'/export')" title="Download PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+    <button class="nav-btn" onclick="showHistory()"><i class="bi bi-clock-history"></i> History</button>
+    <a href="/static/yt_test.html" class="nav-link">YT Test</a>
+    <div class="nav-divider"></div>
+    <button id="btn-start" class="nav-btn nav-btn-success" onclick="openModal('startModal')"><i class="bi bi-play-fill"></i> Start</button>
+    <button id="btn-stop" class="nav-btn nav-btn-danger hidden" onclick="stopSession()"><i class="bi bi-stop-fill"></i> End</button>
   </div>
 </div>
 
-<!-- ══ LAYOUT ══ -->
+<!-- LAYOUT -->
 <div class="layout" id="main-layout">
 
-  <!-- no-session screen -->
+  <!-- No-session screen -->
   <div id="no-session">
     <div class="start-card">
-      <div style="font-size:3rem;margin-bottom:12px">🧠</div>
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin-bottom:10px">
+        <path d="M12 2a7 7 0 017 7c0 3-2 5.5-4 7.5L12 22l-3-5.5C7 14.5 5 12 5 9a7 7 0 017-7z"/>
+        <circle cx="12" cy="9" r="2.5"/>
+      </svg>
       <h2>MSTDN-A Emotion Monitor</h2>
       <p>Start a session to begin real-time emotion and stress detection for your team.</p>
-      <button class="btn btn-primary btn-lg w-100" onclick="showStartModal()">
-        <i class="bi bi-play-fill me-2"></i>Start New Session
+      <button class="btn-primary-lg" onclick="openModal('startModal')">
+        <i class="bi bi-play-fill"></i> Start New Session
       </button>
-      <button class="btn btn-outline-secondary mt-2 w-100" onclick="showHistory()">
-        <i class="bi bi-clock-history me-2"></i>View Past Sessions
+      <button class="btn-outline-lg" onclick="showHistory()">
+        <i class="bi bi-clock-history"></i> View Past Sessions
       </button>
     </div>
   </div>
 
-  <!-- LEFT: participant sidebar (hidden until session) -->
-  <div class="sidebar d-none" id="sidebar">
-    <div class="sidebar-head d-flex justify-content-between align-items-center">
-      <span><i class="bi bi-people me-1"></i>Participants</span>
-      <button class="btn btn-sm btn-outline-accent p-0 px-2" style="font-size:.75rem;border-color:var(--accent);color:var(--accent)" onclick="showAddParticipant()">+ Add</button>
+  <!-- TOP-LEFT: Video Feed -->
+  <div class="video-cell hidden" id="video-cell">
+    <div class="video-wrap">
+      <img id="video-feed" src="" alt="" style="display:none"/>
+      <div class="video-placeholder" id="video-placeholder">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="15" height="13" rx="2"/><polygon points="22 7 17 10 17 14 22 17 22 7"/></svg>
+        <div>Camera starting...</div>
+      </div>
+      <div class="video-label" id="video-label"><i class="bi bi-record-circle"></i> LIVE</div>
+      <div class="face-indicator" id="face-indicator">
+        <div class="fi-label"><i class="bi bi-person-bounding-box"></i> IDENTIFIED</div>
+        <div class="fi-name" id="face-name">--</div>
+        <div class="fi-conf" id="face-conf">--</div>
+      </div>
+      <div class="video-rms">
+        <i class="bi bi-mic-fill" style="color:var(--success);font-size:10px"></i>
+        <div class="rms-bar" id="rms-bars">
+          <span style="height:3px"></span><span style="height:3px"></span>
+          <span style="height:3px"></span><span style="height:3px"></span>
+          <span style="height:3px"></span><span style="height:3px"></span>
+          <span style="height:6px"></span><span style="height:3px"></span>
+        </div>
+        <span id="rms-val" style="font-size:10px;color:#ccc">0.000</span>
+      </div>
     </div>
-    <div id="sidebar-list">
-      <div class="no-participants"><i class="bi bi-person-plus" style="font-size:2rem"></i><br>Add participants to begin tracking</div>
+  </div>
+
+  <!-- TOP-RIGHT: Emotion Panel -->
+  <div class="emotion-cell hidden" id="emotion-cell">
+    <div class="emotion-card">
+      <div class="emo-accent" id="emo-accent"></div>
+      <div class="emo-body">
+        <div class="detected-row">
+          <div id="face-container"></div>
+          <div class="detected-info">
+            <div class="emo-label" id="emo-label">Neutral</div>
+            <div class="emo-conf" id="emo-conf">--</div>
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric-card metric-stress"><div class="metric-label">Stress</div><div class="metric-val" id="m-stress">--</div></div>
+          <div class="metric-card metric-valence"><div class="metric-label">Valence</div><div class="metric-val" id="m-valence">--</div></div>
+          <div class="metric-card metric-arousal"><div class="metric-label">Arousal</div><div class="metric-val" id="m-arousal">--</div></div>
+        </div>
+        <div class="alert-banner" id="alert-banner">High Stress Detected</div>
+        <div class="dist-section">
+          <div class="dist-title">Distribution</div>
+          <div id="prob-bars"></div>
+        </div>
+      </div>
     </div>
-    <div class="mt-auto p-3 border-top" style="border-color:var(--border)!important">
-      <div class="rp-title">Focus Mode</div>
-      <select class="form-select form-select-sm" id="focus-select" onchange="setFocus(this.value)">
-        <option value="">Group (all participants)</option>
+  </div>
+
+  <!-- BOTTOM-LEFT: Participants -->
+  <div class="participants-cell hidden" id="participants-cell">
+    <div class="participants-head">
+      <span class="ph-title"><i class="bi bi-people"></i> Participants</span>
+      <button class="nav-btn" style="padding:2px 8px;font-size:10px" onclick="openModal('addModal')">+ Add</button>
+    </div>
+    <div class="participants-list" id="sidebar-list">
+      <div class="no-participants"><i class="bi bi-person-plus" style="font-size:1.5rem"></i><br>Add participants to begin tracking</div>
+    </div>
+    <div class="focus-bar">
+      <label>Focus:</label>
+      <select class="focus-select" id="focus-select" onchange="setFocus(this.value)">
+        <option value="">Group (all)</option>
       </select>
-      <div style="font-size:.7rem;color:var(--muted);margin-top:6px">Attribute readings to selected person</div>
     </div>
   </div>
 
-  <!-- MAIN: video + emotion (hidden until session) -->
-  <div class="main d-none" id="main-area">
-    <div class="top-row">
-      <!-- video -->
-      <div class="video-wrap">
-        <img id="video-feed" src="" alt="" style="display:none"/>
-        <div class="video-placeholder" id="video-placeholder"><i class="bi bi-camera-video" style="font-size:2.5rem"></i><div>Camera starting…</div></div>
-        <div class="video-label" id="video-label"><i class="bi bi-record-circle"></i> LIVE</div>
-        <!-- face detected indicator -->
-        <div class="face-indicator d-none" id="face-indicator">
-          <div style="color:var(--muted);font-size:.65rem"><i class="bi bi-person-bounding-box me-1"></i>IDENTIFIED</div>
-          <div class="fi-name" id="face-name">—</div>
-          <div style="color:var(--muted);font-size:.65rem" id="face-conf">—</div>
-        </div>
-        <div class="video-rms">
-          <i class="bi bi-mic-fill" style="color:var(--green)"></i>
-          <div class="rms-bar" id="rms-bars">
-            <span style="height:4px"></span><span style="height:4px"></span>
-            <span style="height:4px"></span><span style="height:4px"></span>
-            <span style="height:4px"></span><span style="height:4px"></span>
-            <span style="height:8px"></span><span style="height:4px"></span>
-          </div>
-          <span id="rms-val" style="font-size:.7rem;color:var(--muted)">0.000</span>
-        </div>
-      </div>
+  <!-- BOTTOM-RIGHT: Tabs -->
+  <div class="tabs-cell hidden" id="tabs-cell">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(this,'tab-teach')"><i class="bi bi-lightbulb"></i> Teach</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-analytics')"><i class="bi bi-bar-chart"></i> Analytics</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-alerts')"><i class="bi bi-bell"></i> Alerts</button>
+    </div>
 
-      <!-- current emotion -->
-      <div class="emotion-panel">
-        <div>
-          <div class="conf-text" style="margin-bottom:4px">CURRENT EMOTION</div>
-          <div class="d-flex align-items-center gap-3">
-            <div id="emo-emoji" class="emo-emoji">😐</div>
-            <div id="emo-label" class="emo-label" style="color:var(--text)">Neutral</div>
-          </div>
-          <div class="conf-text mt-1">Confidence: <span id="emo-conf">—</span></div>
+    <!-- Teach tab -->
+    <div class="tab-content" id="tab-teach">
+      <div class="teach-section">
+        <div class="teach-hdr">
+          <div class="teach-title">Teach Model</div>
+          <div class="teach-count" id="dash-teach-count">0 corrections</div>
         </div>
-        <div class="metric-row">
-          <div class="metric-box">
-            <div id="m-stress" class="val" style="color:var(--accent)">—</div>
-            <div class="lbl">Stress</div>
-          </div>
-          <div class="metric-box">
-            <div id="m-valence" class="val" style="color:var(--green)">—</div>
-            <div class="lbl">Valence</div>
-          </div>
-          <div class="metric-box">
-            <div id="m-arousal" class="val" style="color:var(--yellow)">—</div>
-            <div class="lbl">Arousal</div>
-          </div>
-        </div>
-        <div>
-          <div class="conf-text mb-2">Emotion Distribution</div>
-          <div class="prob-bars" id="prob-bars"></div>
-        </div>
-      </div>
-
-      <!-- teach panel -->
-      <div class="teach-panel" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px">TEACH MODEL</div>
-          <div style="font-size:10px;color:var(--accent);font-weight:600" id="dash-teach-count">0 corrections</div>
-        </div>
-        <div id="dash-teach-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px"></div>
-        <div id="dash-teach-feedback" style="font-size:10px;color:var(--muted);margin-top:8px;min-height:16px;text-align:center">Click an emotion to correct the model</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-          <span style="font-size:9px;color:var(--muted)">Buffer: <span id="dash-teach-buffer">0</span> chunks</span>
-          <button onclick="dashTeachSave()" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#21262d;color:var(--muted);cursor:pointer;font-size:9px;font-weight:700">Save Checkpoint</button>
+        <div class="teach-grid" id="dash-teach-grid"></div>
+        <div class="teach-feedback" id="dash-teach-feedback">Click an emotion to correct the model</div>
+        <div class="teach-footer">
+          <span class="teach-buffer">Buffer: <span id="dash-teach-buffer">0</span> chunks</span>
+          <button class="btn-save" onclick="dashTeachSave()">Save Checkpoint</button>
         </div>
       </div>
     </div>
 
-    <!-- participant cards grid -->
-    <div id="pgrid-wrap" class="d-none">
-      <div class="grid-title"><i class="bi bi-grid me-1"></i>Participants — Live Status</div>
-      <div class="p-grid" id="p-grid"></div>
+    <!-- Analytics tab -->
+    <div class="tab-content hidden" id="tab-analytics">
+      <div class="stat-grid">
+        <div class="stat-cell"><div id="rs-emotion" class="sv">--</div><div class="sl">Dominant</div></div>
+        <div class="stat-cell"><div id="rs-stress" class="sv" style="color:var(--accent)">--</div><div class="sl">Mean Stress</div></div>
+        <div class="stat-cell"><div id="rs-valence" class="sv" style="color:var(--success)">--</div><div class="sl">Mean Valence</div></div>
+        <div class="stat-cell"><div id="rs-readings" class="sv">0</div><div class="sl">Readings</div></div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-label">Stress Timeline (last 60s)</div>
+        <canvas id="stress-chart" height="100"></canvas>
+      </div>
+      <div class="chart-section">
+        <div class="chart-label">Emotion Frequency</div>
+        <canvas id="emotion-chart" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- Alerts tab -->
+    <div class="tab-content hidden" id="tab-alerts">
+      <div class="chart-label" style="margin-bottom:6px"><i class="bi bi-exclamation-triangle" style="color:var(--danger)"></i> Stress Alerts</div>
+      <div id="alert-list"><div style="font-size:11px;color:var(--text-muted)">No alerts yet.</div></div>
     </div>
   </div>
 
-  <!-- RIGHT: analytics panel (hidden until session) -->
-  <div class="right-panel d-none" id="right-panel">
-    <div class="rp-tabs">
-      <div class="rp-tab active" onclick="rpTab(this,'rp-stats')"><i class="bi bi-bar-chart me-1"></i>Analytics</div>
-      <div class="rp-tab" onclick="rpTab(this,'rp-alerts')"><i class="bi bi-bell me-1"></i>Alerts</div>
-      <div class="rp-tab" onclick="rpTab(this,'rp-hist')"><i class="bi bi-clock me-1"></i>Sessions</div>
-    </div>
+</div>
 
-    <!-- stats tab -->
-    <div id="rp-stats">
-      <div class="rp-section">
-        <div class="rp-title">Room Overview</div>
-        <div class="stat-grid">
-          <div class="stat-cell"><div id="rs-emotion" class="sv">—</div><div class="sl">Dominant</div></div>
-          <div class="stat-cell"><div id="rs-stress"  class="sv" style="color:var(--accent)">—</div><div class="sl">Mean Stress</div></div>
-          <div class="stat-cell"><div id="rs-valence" class="sv" style="color:var(--green)">—</div><div class="sl">Mean Valence</div></div>
-          <div class="stat-cell"><div id="rs-readings" class="sv">0</div><div class="sl">Readings</div></div>
-        </div>
-      </div>
-      <div class="chart-wrap">
-        <div class="rp-title">Stress Timeline (last 60s)</div>
-        <canvas id="stress-chart" height="130"></canvas>
-      </div>
-      <div class="chart-wrap">
-        <div class="rp-title">Emotion Frequency</div>
-        <canvas id="emotion-chart" height="160"></canvas>
-      </div>
+<!-- START SESSION MODAL -->
+<div class="modal-overlay" id="startModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><i class="bi bi-play-circle" style="color:var(--success)"></i> Start New Session</h3>
+      <button class="modal-close" onclick="closeModal('startModal')">&times;</button>
     </div>
-
-    <!-- alerts tab -->
-    <div id="rp-alerts" class="d-none rp-section">
-      <div class="rp-title"><i class="bi bi-exclamation-triangle me-1" style="color:var(--red)"></i>Stress Alerts</div>
-      <div id="alert-list"><div class="text-muted" style="font-size:.8rem">No alerts yet.</div></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Session Name <span class="req">*</span></label>
+        <input type="text" class="form-input" id="sess-name" placeholder="e.g. Team Meeting -- March 2026"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location / Room</label>
+        <input type="text" class="form-input" id="sess-location" placeholder="e.g. Conference Room A"/>
+      </div>
+      <div style="height:1px;background:var(--border);margin:12px 0"></div>
+      <div class="form-label" style="margin-bottom:6px">Add Participants</div>
+      <div id="modal-participants"></div>
+      <div class="form-row">
+        <input type="text" class="form-input" id="mp-name" placeholder="Full name"/>
+        <input type="text" class="form-input" id="mp-role" placeholder="Role"/>
+        <button class="nav-btn" style="white-space:nowrap" onclick="modalAddP()">+ Add</button>
+      </div>
+      <div class="form-hint">You can also add more participants after starting the session.</div>
     </div>
-
-    <!-- sessions tab -->
-    <div id="rp-hist" class="d-none rp-section">
-      <div class="rp-title">Past Sessions</div>
-      <div class="history-list" id="history-list"><div class="text-muted" style="font-size:.8rem">Loading…</div></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeModal('startModal')">Cancel</button>
+      <button class="btn-primary" onclick="startSession()"><i class="bi bi-play-fill"></i> Start Session</button>
     </div>
   </div>
 </div>
 
-<!-- ══ START SESSION MODAL ══ -->
-<div class="modal fade" id="startModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title"><i class="bi bi-play-circle me-2" style="color:var(--green)"></i>Start New Session</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label" style="font-size:.85rem">Session Name <span style="color:var(--red)">*</span></label>
-          <input type="text" class="form-control" id="sess-name" placeholder="e.g. Team Meeting — March 2026"/>
-        </div>
-        <div class="mb-3">
-          <label class="form-label" style="font-size:.85rem">Location / Room</label>
-          <input type="text" class="form-control" id="sess-location" placeholder="e.g. Conference Room A"/>
-        </div>
-        <hr class="border-secondary"/>
-        <div class="rp-title">Add Participants</div>
-        <div id="modal-participants"></div>
-        <div class="row g-2 mt-1">
-          <div class="col-5"><input type="text" class="form-control form-control-sm" id="mp-name" placeholder="Full name"/></div>
-          <div class="col-4"><input type="text" class="form-control form-control-sm" id="mp-role" placeholder="Role"/></div>
-          <div class="col-3"><button class="btn btn-sm btn-outline-accent w-100" style="border-color:var(--accent);color:var(--accent)" onclick="modalAddP()">+ Add</button></div>
-        </div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:6px">You can also add more participants after starting the session.</div>
-      </div>
-      <div class="modal-footer border-secondary">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-success btn-sm" onclick="startSession()"><i class="bi bi-play-fill me-1"></i>Start Session</button>
-      </div>
+<!-- ADD PARTICIPANT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-head">
+      <h3><i class="bi bi-person-plus"></i> Add Participant</h3>
+      <button class="modal-close" onclick="closeModal('addModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><input type="text" class="form-input" id="ap-name" placeholder="Full name *"/></div>
+      <div class="form-group"><input type="text" class="form-input" id="ap-role" placeholder="Role (e.g. Engineer)"/></div>
+      <div class="form-group"><input type="text" class="form-input" id="ap-dept" placeholder="Department"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+      <button class="btn-primary" onclick="addParticipant()">Add</button>
     </div>
   </div>
 </div>
 
-<!-- ══ ADD PARTICIPANT MODAL ══ -->
-<div class="modal fade" id="addModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add Participant</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2"><input type="text" class="form-control" id="ap-name" placeholder="Full name *"/></div>
-        <div class="mb-2"><input type="text" class="form-control" id="ap-role" placeholder="Role (e.g. Engineer)"/></div>
-        <div class="mb-2"><input type="text" class="form-control" id="ap-dept" placeholder="Department"/></div>
-      </div>
-      <div class="modal-footer border-secondary">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="addParticipant()">Add</button>
-      </div>
+<!-- HISTORY MODAL -->
+<div class="modal-overlay" id="histModal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3><i class="bi bi-clock-history"></i> Session History</h3>
+      <button class="modal-close" onclick="closeModal('histModal')">&times;</button>
     </div>
+    <div class="modal-body" id="hist-modal-body">Loading...</div>
   </div>
 </div>
 
-<!-- ══ HISTORY MODAL ══ -->
-<div class="modal fade" id="histModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Session History</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body" id="hist-modal-body">Loading…</div>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ── constants ────────────────────────────────────────────────────────────────
-const EMOTIONS = ["Anger","Disgust","Fear","Happiness","Neutral","Sadness","Surprise","Contempt","Anxiety","Helplessness","Disappointment"];
-const EMOJIS   = ["😠","🤢","😨","😊","😐","😢","😲","😒","😰","😞","😔"];
-const ECOLORS  = ["#f85149","#3fb950","#8957e5","#ffd700","#c9d1d9","#58a6ff","#ff9800","#e57373","#ffb300","#7986cb","#ab47bc"];
-const AVATARCLR= ["#1f6feb","#388bfd","#58a6ff","#79c0ff","#3fb950","#56d364","#1a7f37","#d29922","#9e6a03","#f85149","#da3633"];
+// ── modal helpers ──────────────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+// close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
 
-// ── state ────────────────────────────────────────────────────────────────────
+// ── constants ──────────────────────────────────────────────────────────────────
+const EMOTIONS=["Anger","Disgust","Fear","Happiness","Neutral","Sadness","Surprise","Contempt","Anxiety","Helplessness","Disappointment"];
+const BAR_COLORS=["#ef4444","#a855f7","#f97316","#22c55e","#94a3b8","#3b82f6","#eab308","#6b7280","#f97316","#6b7280","#6b7280"];
+const ACCENT_MAP={Anger:"#ef4444",Happiness:"#22c55e",Sadness:"#3b82f6",Fear:"#f97316",Surprise:"#eab308",Disgust:"#a855f7",Neutral:"#6366f1"};
+const ECOLORS=["#ef4444","#a855f7","#f97316","#22c55e","#94a3b8","#3b82f6","#eab308","#6b7280","#f97316","#6b7280","#6b7280"];
+const AVATARCLR=["#6366f1","#3b82f6","#22c55e","#eab308","#ef4444","#a855f7","#f97316","#06b6d4","#ec4899","#14b8a6","#f43f5e"];
+
+// ── SVG face silhouettes ───────────────────────────────────────────────────────
+function faceSVG(emotion,size=52){
+  const s=size,c=s/2,r=s*.38,sc=s/72;
+  const col=ACCENT_MAP[emotion]||'#6366f1';
+  const el=c-10*sc,er=c+10*sc,ey=c-6*sc;
+  const head=`<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${col}" stroke-width="${2*sc}" opacity=".3"/>`;
+  const dot=(x,y,sz)=>`<circle cx="${x}" cy="${y}" r="${sz*sc}" fill="${col}"/>`;
+  const brow=(x1,y1,x2,y2)=>`<line x1="${x1*sc}" y1="${y1*sc}" x2="${x2*sc}" y2="${y2*sc}" stroke="${col}" stroke-width="${1.8*sc}" stroke-linecap="round"/>`;
+  let eyes=dot(el,ey,2.5)+dot(er,ey,2.5),brows='',mouth='';
+  switch(emotion){
+    case'Anger':brows=brow(16,18,24,21)+brow(48,21,56,18);mouth=`<path d="M${22*sc},${46*sc} Q${c},${42*sc} ${50*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Disgust':brows=brow(18,20,26,18)+brow(46,18,54,20);mouth=`<path d="M${24*sc},${44*sc} Q${30*sc},${48*sc} ${36*sc},${43*sc} Q${42*sc},${40*sc} ${48*sc},${44*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;eyes=dot(el,ey,2)+dot(er,ey,2);break;
+    case'Fear':brows=brow(18,22,26,17)+brow(46,17,54,22);eyes=`<ellipse cx="${el}" cy="${ey}" rx="${3*sc}" ry="${3.5*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${el}" cy="${ey}" r="${1.5*sc}" fill="${col}"/><ellipse cx="${er}" cy="${ey}" rx="${3*sc}" ry="${3.5*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${er}" cy="${ey}" r="${1.5*sc}" fill="${col}"/>`;mouth=`<ellipse cx="${c}" cy="${46*sc}" rx="${6*sc}" ry="${4*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}"/>`;break;
+    case'Happiness':brows=brow(18,20,26,18)+brow(46,18,54,20);mouth=`<path d="M${22*sc},${42*sc} Q${c},${54*sc} ${50*sc},${42*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Neutral':mouth=`<line x1="${26*sc}" y1="${44*sc}" x2="${46*sc}" y2="${44*sc}" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Sadness':brows=brow(18,18,26,22)+brow(46,22,54,18);mouth=`<path d="M${24*sc},${46*sc} Q${c},${40*sc} ${48*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Surprise':brows=brow(18,20,26,15)+brow(46,15,54,20);eyes=`<ellipse cx="${el}" cy="${ey}" rx="${3*sc}" ry="${4*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${el}" cy="${ey}" r="${1.5*sc}" fill="${col}"/><ellipse cx="${er}" cy="${ey}" rx="${3*sc}" ry="${4*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${er}" cy="${ey}" r="${1.5*sc}" fill="${col}"/>`;mouth=`<ellipse cx="${c}" cy="${46*sc}" rx="${5*sc}" ry="${5*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}"/>`;break;
+    case'Contempt':mouth=`<path d="M${24*sc},${44*sc} L${40*sc},${44*sc} Q${48*sc},${42*sc} ${50*sc},${40*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;brows=brow(46,19,54,18);break;
+    case'Anxiety':brows=brow(18,21,26,17)+brow(46,17,54,21);mouth=`<path d="M${24*sc},${44*sc} Q${28*sc},${47*sc} ${32*sc},${43*sc} Q${36*sc},${47*sc} ${40*sc},${43*sc} Q${44*sc},${47*sc} ${48*sc},${44*sc}" fill="none" stroke="${col}" stroke-width="${1.8*sc}" stroke-linecap="round"/>`;break;
+    case'Helplessness':brows=brow(18,18,26,22)+brow(46,22,54,18);mouth=`<path d="M${26*sc},${46*sc} Q${c},${41*sc} ${46*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Disappointment':brows=brow(18,19,26,22)+brow(46,22,54,19);mouth=`<path d="M${26*sc},${46*sc} Q${c},${42*sc} ${46*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;eyes=dot(el,ey+2*sc,2.5)+dot(er,ey+2*sc,2.5);break;
+  }
+  return`<svg class="face-icon" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">${head}${eyes}${brows}${mouth}</svg>`;
+}
+function faceSmall(e){return faceSVG(e,22).replace('class="face-icon"','class="teach-face"');}
+
+// ── state ──────────────────────────────────────────────────────────────────────
 let ws, sessionId=null, participants=[], activeSpeaker=null;
 let stressHistory=[], emotionCount={}, readingCount=0;
 let timerInterval, sessionStart, modalParticipants=[];
 let stressChart, emotionChart;
-let faceStatus={};   // participant_id -> bool (face registered)
-let _sessionActivated=false;  // guard against double-activation
+let faceStatus={};
+let _sessionActivated=false;
 
-// ── connect WebSocket ─────────────────────────────────────────────────────────
+// ── connect WebSocket ──────────────────────────────────────────────────────────
 function connectWS(){
-  ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen = ()=> console.log("WS connected");
-  ws.onclose= ()=> setTimeout(connectWS, 2000);
-  ws.onmessage = e => handleMsg(JSON.parse(e.data));
+  ws=new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen=()=>console.log("WS connected");
+  ws.onclose=()=>setTimeout(connectWS,2000);
+  ws.onmessage=e=>handleMsg(JSON.parse(e.data));
 }
 
 function handleMsg(d){
   if(d.type==="init"){
-    sessionId    = d.session_id;
-    participants = d.participants||[];
+    sessionId=d.session_id;
+    participants=d.participants||[];
     if(d.running) activateSession();
     if(d.latest) applyResult(d.latest);
   }
@@ -469,7 +587,8 @@ function handleMsg(d){
     activeSpeaker=d.participant_id;
     renderParticipants();
     if(d.auto && d.name){
-      document.getElementById("face-indicator").classList.remove("d-none");
+      const fi=document.getElementById("face-indicator");
+      fi.style.display="block";
       document.getElementById("face-name").textContent=d.name;
       document.getElementById("face-conf").textContent="Auto-identified";
     }
@@ -480,7 +599,7 @@ function handleMsg(d){
   else if(d.type==="face_registered"){
     faceStatus[d.participant_id]=true;
     renderParticipants();
-    showToast(`Face registered for ${d.name}`,"success");
+    showToast("Face registered for "+d.name,"success");
   }
   else if(d.type==="emotion_update"){
     applyResult(d);
@@ -493,59 +612,55 @@ function handleMsg(d){
   }
 }
 
-// ── mic wave animation ────────────────────────────────────────────────────────
-function setMicWave(waveId, iconId, rms, isOn){
+// ── mic wave animation ─────────────────────────────────────────────────────────
+function setMicWave(waveId,iconId,rms,isOn){
   const wave=document.getElementById(waveId);
   const icon=document.getElementById(iconId);
   if(!wave) return;
   if(!isOn){
     wave.className="mic-wave off";
-    icon.style.color="var(--muted)";
+    icon.style.color="var(--text-muted)";
     wave.querySelectorAll("span").forEach(b=>b.style.height="3px");
     return;
   }
-  const loud  = rms > 0.05;
-  const active= rms > 0.003;
+  const loud=rms>0.05;
+  const active=rms>0.003;
   if(loud){
     wave.className="mic-wave loud";
-    icon.style.color="var(--red)";
+    icon.style.color="var(--danger)";
   } else if(active){
     wave.className="mic-wave active";
-    icon.style.color="var(--green)";
+    icon.style.color="var(--success)";
   } else {
     wave.className="mic-wave idle";
-    icon.style.color="var(--green)";
-    return;  // CSS handles the breathing animation
+    icon.style.color="var(--success)";
+    return;
   }
-  // manual bar animation for active/loud
-  const level=Math.min(rms*12, 1);
+  const level=Math.min(rms*12,1);
   wave.querySelectorAll("span").forEach((b,i)=>{
     const phase=[0.5,0.8,1.0,0.8,0.5][i];
-    const h=Math.max(4, Math.round(level*phase*(0.5+Math.random()*0.5)*16));
+    const h=Math.max(4,Math.round(level*phase*(0.5+Math.random()*0.5)*16));
     b.style.height=h+"px";
   });
 }
 
-// ── session lifecycle ─────────────────────────────────────────────────────────
+// ── face detection ─────────────────────────────────────────────────────────────
 function handleFaceDetections(faces){
-  if(!faces.length){
-    document.getElementById("face-indicator").classList.add("d-none");
-    return;
-  }
+  const fi=document.getElementById("face-indicator");
+  if(!faces.length){fi.style.display="none";return;}
   const identified=faces.filter(f=>f.participant_id!==null);
   if(identified.length){
     const f=identified[0];
-    document.getElementById("face-indicator").classList.remove("d-none");
+    fi.style.display="block";
     document.getElementById("face-name").textContent=f.name;
-    document.getElementById("face-conf").textContent=`Match: ${((1-f.distance)*100).toFixed(0)}%`;
+    document.getElementById("face-conf").textContent="Match: "+((1-f.distance)*100).toFixed(0)+"%";
   } else {
-    document.getElementById("face-indicator").classList.add("d-none");
+    fi.style.display="none";
   }
-  // update participant cards with detection badges
   faces.forEach(f=>{
     if(f.participant_id===null) return;
     const pc=document.getElementById("pc"+f.participant_id);
-    if(pc) pc.style.boxShadow="0 0 0 2px var(--accent),0 0 12px rgba(88,166,255,.3)";
+    if(pc) pc.style.boxShadow="0 0 0 2px var(--accent),0 0 10px rgba(99,102,241,.2)";
   });
 }
 
@@ -560,10 +675,10 @@ async function loadFaceStatuses(){
   }
 }
 
-async function registerFace(pid, event){
+async function registerFace(pid,event){
   event.stopPropagation();
   const btn=event.target.closest("button");
-  if(btn){ btn.disabled=true; btn.textContent="Capturing…"; }
+  if(btn){btn.disabled=true;btn.textContent="Capturing...";}
   try{
     const r=await fetch(`/api/participants/${pid}/register_face`,{method:"POST"});
     if(!r.ok){
@@ -574,44 +689,44 @@ async function registerFace(pid, event){
       renderParticipants();
     }
   }finally{
-    if(btn){ btn.disabled=false; }
+    if(btn){btn.disabled=false;}
   }
 }
 
+// ── session lifecycle ──────────────────────────────────────────────────────────
 async function activateSession(){
-  if(_sessionActivated) return;   // prevent double-call
+  if(_sessionActivated) return;
   _sessionActivated=true;
-  document.getElementById("no-session").classList.add("d-none");
-  document.getElementById("sidebar").classList.remove("d-none");
-  document.getElementById("main-area").classList.remove("d-none");
-  document.getElementById("right-panel").classList.remove("d-none");
-  document.getElementById("btn-start").classList.add("d-none");
-  document.getElementById("btn-stop").classList.remove("d-none");
-  document.getElementById("session-badge").textContent="● LIVE";
-  document.getElementById("session-badge").classList.add("live");
-  // keep placeholder until camera stream delivers its first frame
+  document.getElementById("no-session").classList.add("hidden");
+  document.getElementById("video-cell").classList.remove("hidden");
+  document.getElementById("emotion-cell").classList.remove("hidden");
+  document.getElementById("participants-cell").classList.remove("hidden");
+  document.getElementById("tabs-cell").classList.remove("hidden");
+  document.getElementById("btn-start").classList.add("hidden");
+  document.getElementById("btn-stop").classList.remove("hidden");
+  document.getElementById("session-badge").className="status-chip status-live";
+  document.getElementById("session-badge-text").textContent="LIVE";
   const feed=document.getElementById("video-feed");
   const ph=document.getElementById("video-placeholder");
-  ph.innerHTML='<i class="bi bi-camera-video" style="font-size:2.5rem"></i><div>Camera warming up…</div>';
+  ph.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="15" height="13" rx="2"/><polygon points="22 7 17 10 17 14 22 17 22 7"/></svg><div>Camera warming up...</div>';
   ph.style.display="flex";
   feed.style.display="none";
-  feed.onload=()=>{ feed.style.display="block"; ph.style.display="none"; feed.onload=null; };
+  feed.onload=()=>{feed.style.display="block";ph.style.display="none";feed.onload=null;};
   feed.src="/video";
   initCharts();
-  try{ await loadFaceStatuses(); }catch(e){}
+  try{await loadFaceStatuses();}catch(e){}
   renderParticipants();
   startTimer();
-  readingCount=0; stressHistory=[]; emotionCount={};
+  readingCount=0;stressHistory=[];emotionCount={};
 }
 
 function deactivateSession(summary){
-  _sessionActivated=false;   // allow next session to activate
-  document.getElementById("btn-start").classList.remove("d-none");
-  document.getElementById("btn-stop").classList.add("d-none");
-  document.getElementById("session-badge").textContent="No Session";
-  document.getElementById("session-badge").classList.remove("live");
+  _sessionActivated=false;
+  document.getElementById("btn-start").classList.remove("hidden");
+  document.getElementById("btn-stop").classList.add("hidden");
+  document.getElementById("session-badge").className="status-chip status-idle";
+  document.getElementById("session-badge-text").textContent="No Session";
   document.getElementById("video-feed").src="";
-  // reset mic waves to off
   ["mic1-wave","mic2-wave"].forEach(id=>{
     const w=document.getElementById(id);
     if(w) w.className="mic-wave off";
@@ -619,7 +734,7 @@ function deactivateSession(summary){
   clearInterval(timerInterval);
   document.getElementById("timer").textContent="--:--:--";
   if(summary){
-    showToast(`Session complete. Dominant emotion: ${summary.dominant_emotion} | Mean stress: ${(summary.mean_stress*100).toFixed(0)}%`,"info",8000);
+    showToast("Session complete. Dominant: "+summary.dominant_emotion+" | Stress: "+(summary.mean_stress*100).toFixed(0)+"%","info",8000);
   }
 }
 
@@ -631,27 +746,33 @@ function startTimer(){
     const h=String(Math.floor(s/3600)).padStart(2,"0");
     const m=String(Math.floor((s%3600)/60)).padStart(2,"0");
     const ss=String(s%60).padStart(2,"0");
-    document.getElementById("timer").textContent=`${h}:${m}:${ss}`;
+    document.getElementById("timer").textContent=h+":"+m+":"+ss;
   },1000);
 }
 
 // ── apply emotion result ───────────────────────────────────────────────────────
 function applyResult(d){
   const ei=EMOTIONS.indexOf(d.emotion);
-  const color=ei>=0?ECOLORS[ei]:"#c9d1d9";
-  document.getElementById("emo-emoji").textContent=d.emoji||"😐";
-  document.getElementById("emo-label").textContent=d.emotion;
-  document.getElementById("emo-label").style.color=color;
-  document.getElementById("emo-conf").textContent=d.confidence?(d.confidence*100).toFixed(1)+"%":"—";
-  document.getElementById("m-stress").textContent =d.stress  !=null?(d.stress*100).toFixed(0)+"%":"—";
-  document.getElementById("m-valence").textContent=d.valence !=null?d.valence.toFixed(2):"—";
-  document.getElementById("m-arousal").textContent=d.arousal !=null?d.arousal.toFixed(2):"—";
+  const color=ei>=0?ECOLORS[ei]:"var(--text)";
+
+  document.getElementById("face-container").innerHTML=faceSVG(d.emotion||"Neutral");
+  document.getElementById("emo-label").textContent=d.emotion||"Neutral";
+  document.getElementById("emo-label").style.color=ACCENT_MAP[d.emotion]||"var(--text)";
+  document.getElementById("emo-conf").textContent=d.confidence?(d.confidence*100).toFixed(1)+"% confidence":"--";
+  document.getElementById("m-stress").textContent=d.stress!=null?(d.stress*100).toFixed(0)+"%":"--";
+  document.getElementById("m-valence").textContent=d.valence!=null?d.valence.toFixed(2):"--";
+  document.getElementById("m-arousal").textContent=d.arousal!=null?d.arousal.toFixed(2):"--";
   document.getElementById("m-stress").style.color=stressColor(d.stress);
 
+  const ac=ACCENT_MAP[d.emotion]||"#6366f1";
+  document.getElementById("emo-accent").style.background=ac;
+
+  document.getElementById("alert-banner").style.display=d.alert?"block":"none";
+
   // room stats
-  document.getElementById("rs-emotion").textContent=d.emotion||"—";
-  document.getElementById("rs-stress").textContent=d.stress!=null?(d.stress*100).toFixed(0)+"%":"—";
-  document.getElementById("rs-valence").textContent=d.valence!=null?d.valence.toFixed(2):"—";
+  document.getElementById("rs-emotion").textContent=d.emotion||"--";
+  document.getElementById("rs-stress").textContent=d.stress!=null?(d.stress*100).toFixed(0)+"%":"--";
+  document.getElementById("rs-valence").textContent=d.valence!=null?d.valence.toFixed(2):"--";
 
   // prob bars
   if(d.probs) renderProbBars(d.probs);
@@ -676,19 +797,19 @@ function applyResult(d){
 
 function stressColor(v){
   if(v==null) return "var(--accent)";
-  if(v>0.7) return "var(--red)";
-  if(v>0.45) return "var(--yellow)";
-  return "var(--green)";
+  if(v>0.7) return "var(--danger)";
+  if(v>0.45) return "var(--warn)";
+  return "var(--success)";
 }
 
 function renderProbBars(probs){
   const el=document.getElementById("prob-bars");
   if(!el.children.length){
     el.innerHTML=EMOTIONS.map((e,i)=>`
-      <div class="prob-row">
-        <span class="pname">${e}</span>
-        <div class="pbar-wrap"><div class="pbar-fill" id="pb${i}" style="background:${ECOLORS[i]}"></div></div>
-        <span class="pval" id="pv${i}"></span>
+      <div class="dist-row">
+        <div class="dist-label">${e}</div>
+        <div class="dist-track"><div class="dist-fill" id="pb${i}" style="background:${BAR_COLORS[i]}"></div></div>
+        <div class="dist-pct" id="pv${i}"></div>
       </div>`).join("");
   }
   probs.forEach((v,i)=>{
@@ -704,68 +825,51 @@ function updateRmsBars(rms){
   const bars=document.querySelectorAll("#rms-bars span");
   const level=Math.min(rms*10,1);
   bars.forEach((b,i)=>{
-    const h=Math.max(3,Math.random()*level*20+level*4);
+    const h=Math.max(3,Math.random()*level*18+level*4);
     b.style.height=h+"px";
-    b.style.background=rms>0.05?"var(--green)":rms>0.01?"var(--yellow)":"#444";
+    b.style.background=rms>0.05?"var(--success)":rms>0.01?"var(--warn)":"#666";
   });
 }
 
-// ── participants ──────────────────────────────────────────────────────────────
+// ── participants ───────────────────────────────────────────────────────────────
 function renderParticipants(){
-  // sidebar list
   const list=document.getElementById("sidebar-list");
   const focus=document.getElementById("focus-select");
-  const grid=document.getElementById("p-grid");
-  const pgWrap=document.getElementById("pgrid-wrap");
 
   if(!participants.length){
-    list.innerHTML='<div class="no-participants"><i class="bi bi-person-plus" style="font-size:2rem"></i><br>Add participants to begin tracking</div>';
-    pgWrap.classList.add("d-none");
+    list.innerHTML='<div class="no-participants"><i class="bi bi-person-plus" style="font-size:1.5rem"></i><br>Add participants to begin tracking</div>';
   } else {
-    pgWrap.classList.remove("d-none");
-    list.innerHTML=participants.map(p=>`
-      <div class="participant-card${activeSpeaker===p.id?' active-speaker':''}" onclick="setFocusDirect(${p.id})" id="sc${p.id}">
-        <div class="d-flex justify-content-between">
-          <div>
-            <div class="p-name">${esc(p.name)}
-              ${faceStatus[p.id]?'<i class="bi bi-person-check ms-1" style="color:var(--green);font-size:.75rem" title="Face registered"></i>':'<i class="bi bi-person-x ms-1" style="color:var(--muted);font-size:.75rem" title="No face registered"></i>'}
-            </div>
-            <div class="p-role">${esc(p.role)}${p.department?' · '+esc(p.department):''}</div>
-          </div>
-          <button class="btn btn-sm p-0" style="color:var(--muted)" onclick="event.stopPropagation();removeParticipant(${p.id})">✕</button>
-        </div>
-        <div class="p-emotion" id="se${p.id}">😐 Neutral</div>
-        <div class="stress-mini"><div class="stress-fill" id="sf${p.id}" style="width:0%;background:var(--green)"></div></div>
-      </div>`).join("");
-
-    grid.innerHTML=participants.map((p,i)=>{
+    list.innerHTML=participants.map((p,i)=>{
       const hasFace=faceStatus[p.id];
-      const faceBadge=hasFace
-        ?`<span class="face-badge registered"><i class="bi bi-person-check me-1"></i>Face OK</span>`
-        :`<span class="face-badge not-registered"><i class="bi bi-person-x me-1"></i>No Face</span>`;
-      const faceBtn=hasFace
-        ?`<button class="btn btn-outline-secondary register-face-btn" onclick="registerFace(${p.id},event)" title="Re-register face"><i class="bi bi-arrow-repeat"></i></button>`
-        :`<button class="btn btn-outline-primary register-face-btn" onclick="registerFace(${p.id},event)"><i class="bi bi-camera me-1"></i>Register Face</button>`;
+      const faceBadgeClass=hasFace?"p-face-badge registered":"p-face-badge not-registered";
+      const faceBadgeText=hasFace?"Face OK":"No Face";
+      const faceIcon=hasFace?"bi-person-check":"bi-person-x";
       return `
-      <div class="p-card${activeSpeaker===p.id?' focused':''}" id="pc${p.id}" onclick="setFocusDirect(${p.id})">
-        <div class="d-flex justify-content-between align-items-start">
-          <div class="avatar" style="background:${AVATARCLR[i%AVATARCLR.length]}20;color:${AVATARCLR[i%AVATARCLR.length]}">${initials(p.name)}</div>
-          <button class="btn btn-sm p-0 px-1" style="color:var(--muted);font-size:.7rem" onclick="event.stopPropagation();removeParticipant(${p.id})"><i class="bi bi-x-lg"></i></button>
+      <div class="participant-card${activeSpeaker===p.id?' active-speaker':''}" id="pc${p.id}" onclick="setFocusDirect(${p.id})">
+        <div class="p-avatar" style="background:${AVATARCLR[i%AVATARCLR.length]}18;color:${AVATARCLR[i%AVATARCLR.length]}">${initials(p.name)}</div>
+        <div class="p-info">
+          <div class="p-name">
+            ${esc(p.name)}
+            <i class="bi ${faceIcon}" style="font-size:10px;color:${hasFace?'var(--success)':'var(--text-muted)'}"></i>
+          </div>
+          <div class="p-role">${esc(p.role)}${p.department?' / '+esc(p.department):''}</div>
+          <div class="p-emotion-line" id="pe${p.id}">${faceSVG('Neutral',16)} Neutral</div>
+          <div class="p-stress-bar"><div class="p-stress-fill" id="pf${p.id}" style="width:0%;background:var(--success)"></div></div>
         </div>
-        <div class="pn">${esc(p.name)}</div>
-        <div class="pr">${esc(p.role)}${p.department?' · '+esc(p.department):''}</div>
-        <div class="d-flex align-items-center gap-2 mt-1">${faceBadge}${faceBtn}</div>
-        <div class="pe mt-2" id="pe${p.id}">😐 <strong>Neutral</strong></div>
-        <div class="stress-bar"><div class="stress-fill" id="pf${p.id}" style="width:0%;background:var(--green)"></div></div>
-        <canvas id="pc-chart-${p.id}" height="45" style="margin-top:8px"></canvas>
-      </div>`}).join("");
-
-    // init mini charts
-    participants.forEach(p=>initMiniChart(p.id));
+        <div class="p-actions">
+          <span class="${faceBadgeClass}"><i class="bi ${faceIcon}"></i> ${faceBadgeText}</span>
+          ${hasFace
+            ?'<button class="p-btn-sm" onclick="registerFace('+p.id+',event)" title="Re-register face"><i class="bi bi-arrow-repeat"></i></button>'
+            :'<button class="p-btn-sm" onclick="registerFace('+p.id+',event)" title="Register face" style="color:var(--accent)"><i class="bi bi-camera"></i> Register</button>'
+          }
+          <button class="p-btn-sm" onclick="event.stopPropagation();removeParticipant(${p.id})" title="Remove"><i class="bi bi-x-lg"></i></button>
+        </div>
+      </div>`;
+    }).join("");
   }
 
   // focus dropdown
-  focus.innerHTML='<option value="">Group (all participants)</option>'+
+  focus.innerHTML='<option value="">Group (all)</option>'+
     participants.map(p=>`<option value="${p.id}"${activeSpeaker===p.id?' selected':''}>${esc(p.name)}</option>`).join("");
 }
 
@@ -773,77 +877,34 @@ function updateParticipantCards(d){
   participants.forEach(p=>{
     const isActive=activeSpeaker===p.id||(activeSpeaker===null);
     if(!isActive) return;
-    const ei=EMOTIONS.indexOf(d.emotion);
-    const emoji=d.emoji||"😐";
-    const color=ei>=0?ECOLORS[ei]:"#c9d1d9";
-    // sidebar
-    const se=document.getElementById("se"+p.id);
-    if(se) se.innerHTML=`${emoji} <span style="color:${color}">${d.emotion}</span>`;
-    const sf=document.getElementById("sf"+p.id);
-    if(sf){sf.style.width=(d.stress*100).toFixed(0)+"%";sf.style.background=stressColor(d.stress);}
-    // grid card
+    const emo=d.emotion||"Neutral";
+    const col=ACCENT_MAP[emo]||"#6366f1";
     const pe=document.getElementById("pe"+p.id);
-    if(pe) pe.innerHTML=`${emoji} <strong style="color:${color}">${d.emotion}</strong> <span style="color:var(--muted);font-size:.7rem">${(d.confidence*100).toFixed(0)}%</span>`;
+    if(pe) pe.innerHTML=faceSVG(emo,16)+' <span style="color:'+col+'">'+emo+'</span> <span style="color:var(--text-muted);font-size:9px">'+(d.confidence?(d.confidence*100).toFixed(0)+'%':'')+'</span>';
     const pf=document.getElementById("pf"+p.id);
     if(pf){pf.style.width=(d.stress*100).toFixed(0)+"%";pf.style.background=stressColor(d.stress);}
-    // stress alert glow
     const pc=document.getElementById("pc"+p.id);
-    if(pc){pc.classList.toggle("alert",d.stress>0.72);}
-    // mini chart
-    updateMiniChart(p.id, d.stress);
+    if(pc){pc.classList.toggle("stress-alert",d.stress>0.72);}
   });
 }
 
-// ── mini charts per participant ───────────────────────────────────────────────
-const miniCharts={};
-function initMiniChart(pid){
-  const canvas=document.getElementById("pc-chart-"+pid);
-  if(!canvas) return;
-  if(miniCharts[pid]) { miniCharts[pid].destroy(); }
-  miniCharts[pid]=new Chart(canvas,{
-    type:"line",
-    data:{labels:Array(30).fill(""),datasets:[{
-      data:Array(30).fill(null),borderColor:"var(--accent)",
-      backgroundColor:"rgba(88,166,255,.1)",fill:true,
-      borderWidth:1.5,pointRadius:0,tension:.4
-    }]},
-    options:{animation:false,plugins:{legend:{display:false}},
-      scales:{x:{display:false},y:{display:false,min:0,max:1}}}
-  });
-}
-function updateMiniChart(pid, stress){
-  const c=miniCharts[pid];
-  if(!c) return;
-  const data=c.data.datasets[0].data;
-  data.push(stress); if(data.length>30) data.shift();
-  c.data.datasets[0].borderColor=stressColor(stress);
-  c.data.datasets[0].backgroundColor=stress>0.7?"rgba(248,81,73,.1)":"rgba(88,166,255,.1)";
-  c.update("none");
-}
-
-// ── focus control ─────────────────────────────────────────────────────────────
+// ── focus control ──────────────────────────────────────────────────────────────
 function setFocus(val){
   if(val==="") fetch("/api/participants/focus/clear",{method:"POST"});
-  else fetch(`/api/participants/${val}/focus`,{method:"POST"});
+  else fetch("/api/participants/"+val+"/focus",{method:"POST"});
 }
 function setFocusDirect(pid){
   if(activeSpeaker===pid){
     fetch("/api/participants/focus/clear",{method:"POST"});
     activeSpeaker=null;
   } else {
-    fetch(`/api/participants/${pid}/focus`,{method:"POST"});
+    fetch("/api/participants/"+pid+"/focus",{method:"POST"});
     activeSpeaker=pid;
   }
   renderParticipants();
 }
 
-// ── add/remove participant ────────────────────────────────────────────────────
-function showAddParticipant(){
-  document.getElementById("ap-name").value="";
-  document.getElementById("ap-role").value="";
-  document.getElementById("ap-dept").value="";
-  new bootstrap.Modal(document.getElementById("addModal")).show();
-}
+// ── add/remove participant ─────────────────────────────────────────────────────
 async function addParticipant(){
   const name=document.getElementById("ap-name").value.trim();
   if(!name){alert("Name is required");return;}
@@ -851,14 +912,14 @@ async function addParticipant(){
   const dept=document.getElementById("ap-dept").value.trim();
   await fetch("/api/participants",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({name,role,department:dept})});
-  bootstrap.Modal.getInstance(document.getElementById("addModal")).hide();
+  closeModal('addModal');
 }
 async function removeParticipant(pid){
   if(!confirm("Remove this participant?")) return;
-  await fetch(`/api/participants/${pid}`,{method:"DELETE"});
+  await fetch("/api/participants/"+pid,{method:"DELETE"});
 }
 
-// ── session start modal ───────────────────────────────────────────────────────
+// ── session start modal ────────────────────────────────────────────────────────
 function showStartModal(){
   modalParticipants=[];
   document.getElementById("sess-name").value="";
@@ -866,7 +927,7 @@ function showStartModal(){
   document.getElementById("mp-name").value="";
   document.getElementById("mp-role").value="";
   renderModalParticipants();
-  new bootstrap.Modal(document.getElementById("startModal")).show();
+  openModal('startModal');
 }
 function modalAddP(){
   const n=document.getElementById("mp-name").value.trim();
@@ -880,10 +941,11 @@ function modalAddP(){
 function renderModalParticipants(){
   document.getElementById("modal-participants").innerHTML=
     modalParticipants.map((p,i)=>`
-      <div class="d-flex align-items-center gap-2 mb-1 p-2" style="background:#21262d;border-radius:6px;font-size:.82rem">
-        <span style="flex:1"><strong>${esc(p.name)}</strong>${p.role?' — '+esc(p.role):''}</span>
-        <button class="btn btn-sm p-0 px-1" style="color:var(--muted)" onclick="modalParticipants.splice(${i},1);renderModalParticipants()">✕</button>
-      </div>`).join("")||'<div style="color:var(--muted);font-size:.78rem">No participants added yet.</div>';
+      <div class="modal-p-item">
+        <span class="mp-name">${esc(p.name)}</span>
+        ${p.role?'<span class="mp-role">'+esc(p.role)+'</span>':''}
+        <button onclick="modalParticipants.splice(${i},1);renderModalParticipants()">&times;</button>
+      </div>`).join("")||'<div style="color:var(--text-muted);font-size:11px;margin-bottom:4px">No participants added yet.</div>';
 }
 async function startSession(){
   const name=document.getElementById("sess-name").value.trim();
@@ -891,30 +953,29 @@ async function startSession(){
   const location=document.getElementById("sess-location").value.trim();
   const r=await fetch("/api/session/start",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({name,location})});
-  if(!r.ok){ showToast("Failed to start session","danger"); return; }
+  if(!r.ok){showToast("Failed to start session","danger");return;}
   const data=await r.json();
   sessionId=data.session_id;
-  // add participants
   for(const p of modalParticipants){
     await fetch("/api/participants",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({name:p.name,role:p.role,department:""})});
   }
-  bootstrap.Modal.getInstance(document.getElementById("startModal")).hide();
-  // activate dashboard immediately — don't wait for WS broadcast
+  closeModal('startModal');
   activateSession();
   showToast("Both microphones auto-detected and capturing","info");
 }
 async function stopSession(){
   if(!confirm("End the current session?")) return;
   await fetch("/api/session/stop",{method:"POST"});
-  sessionId=null; participants=[]; activeSpeaker=null;
-  document.getElementById("no-session").classList.remove("d-none");
-  document.getElementById("sidebar").classList.add("d-none");
-  document.getElementById("main-area").classList.add("d-none");
-  document.getElementById("right-panel").classList.add("d-none");
+  sessionId=null;participants=[];activeSpeaker=null;
+  document.getElementById("no-session").classList.remove("hidden");
+  document.getElementById("video-cell").classList.add("hidden");
+  document.getElementById("emotion-cell").classList.add("hidden");
+  document.getElementById("participants-cell").classList.add("hidden");
+  document.getElementById("tabs-cell").classList.add("hidden");
 }
 
-// ── charts ────────────────────────────────────────────────────────────────────
+// ── charts ─────────────────────────────────────────────────────────────────────
 function initCharts(){
   if(stressChart) stressChart.destroy();
   if(emotionChart) emotionChart.destroy();
@@ -923,25 +984,26 @@ function initCharts(){
     type:"line",
     data:{labels:Array(60).fill(""),datasets:[{
       label:"Stress",data:Array(60).fill(null),
-      borderColor:"var(--accent)",backgroundColor:"rgba(88,166,255,.08)",
+      borderColor:"#6366f1",backgroundColor:"rgba(99,102,241,.06)",
       fill:true,borderWidth:2,pointRadius:0,tension:.4
     }]},
     options:{animation:false,plugins:{legend:{display:false}},
-      scales:{x:{display:false},y:{min:0,max:1,grid:{color:"#21262d"},
-        ticks:{color:"var(--muted)",font:{size:10},callback:v=>(v*100).toFixed(0)+"%"}}}}
+      scales:{x:{display:false},y:{min:0,max:1,grid:{color:"#e2e5e9"},
+        ticks:{color:"#94a3b8",font:{size:10},callback:v=>(v*100).toFixed(0)+"%"}}}}
   });
   const ec=document.getElementById("emotion-chart");
   emotionChart=new Chart(ec,{
     type:"doughnut",
-    data:{labels:[],datasets:[{data:[],backgroundColor:ECOLORS,borderColor:"var(--bg)",borderWidth:2}]},
-    options:{plugins:{legend:{position:"right",labels:{color:"var(--muted)",font:{size:10},boxWidth:10}}}}
+    data:{labels:[],datasets:[{data:[],backgroundColor:ECOLORS,borderColor:"#fff",borderWidth:2}]},
+    options:{plugins:{legend:{position:"right",labels:{color:"#64748b",font:{size:10},boxWidth:10}}}}
   });
 }
 
 function updateStressChart(){
   if(!stressChart) return;
   stressChart.data.datasets[0].data=[...stressHistory,...Array(60-stressHistory.length).fill(null)];
-  stressChart.data.datasets[0].borderColor=stressColor(stressHistory[stressHistory.length-1]||0);
+  const lastVal=stressHistory[stressHistory.length-1]||0;
+  stressChart.data.datasets[0].borderColor=lastVal>0.7?"#ef4444":lastVal>0.45?"#d97706":"#6366f1";
   stressChart.update("none");
 }
 
@@ -955,91 +1017,74 @@ function updateEmotionChart(){
 }
 
 function updateCharts(history){
-  // stress from history (group key)
   const key=activeSpeaker?String(activeSpeaker):"group";
-  if(history[key]) {
+  if(history[key]){
     stressHistory=[...history[key]];
     updateStressChart();
   }
 }
 
-// ── alerts ────────────────────────────────────────────────────────────────────
+// ── alerts ─────────────────────────────────────────────────────────────────────
 const shownAlerts=new Set();
 function pushAlert(d){
   const ts=new Date().toLocaleTimeString();
   const pname=d.active_speaker?
     (participants.find(p=>p.id===d.active_speaker)||{}).name||"Person":"Group";
-  const key=`${ts}-${pname}`;
+  const key=ts+"-"+pname;
   if(shownAlerts.has(key)) return;
   shownAlerts.add(key);
   const list=document.getElementById("alert-list");
   const item=document.createElement("div");
   item.className="alert-item";
-  item.innerHTML=`<div class="at"><i class="bi bi-exclamation-triangle me-1"></i>High Stress — ${esc(pname)}</div>
-    <div class="am">${ts} · Stress: ${(d.stress*100).toFixed(0)}%</div>`;
+  item.innerHTML='<div class="at"><i class="bi bi-exclamation-triangle"></i> High Stress -- '+esc(pname)+'</div><div class="am">'+ts+' | Stress: '+(d.stress*100).toFixed(0)+'%</div>';
   list.prepend(item);
   if(list.children.length>30) list.lastChild.remove();
-  // toast
-  showToast(`⚠ High stress detected — ${pname} (${(d.stress*100).toFixed(0)}%)`, "danger", 5000);
+  showToast("High stress detected -- "+pname+" ("+(d.stress*100).toFixed(0)+"%)","danger",5000);
 }
 
-// ── history modal ─────────────────────────────────────────────────────────────
+// ── history ────────────────────────────────────────────────────────────────────
 async function showHistory(){
-  const modal=new bootstrap.Modal(document.getElementById("histModal"));
-  modal.show();
+  openModal('histModal');
   const r=await fetch("/api/sessions");
   const sessions=await r.json();
   if(!sessions.length){
-    document.getElementById("hist-modal-body").innerHTML="<p class='text-muted'>No sessions recorded yet.</p>";
+    document.getElementById("hist-modal-body").innerHTML='<div style="color:var(--text-muted);font-size:12px">No sessions recorded yet.</div>';
     return;
   }
   document.getElementById("hist-modal-body").innerHTML=sessions.map(s=>`
-    <div class="d-flex align-items-center gap-3 p-3 mb-2" style="background:#21262d;border-radius:8px">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:6px;background:var(--bg-input);border-radius:8px;border:1px solid var(--border-light)">
       <div style="flex:1">
-        <div style="font-weight:600">${esc(s.name)}</div>
-        <div style="font-size:.75rem;color:var(--muted)">${s.location||''} · ${new Date(s.started_at).toLocaleDateString()} ${new Date(s.started_at).toLocaleTimeString()}</div>
-        <div style="font-size:.75rem;color:var(--muted)">${s.ended_at?'Ended: '+new Date(s.ended_at).toLocaleTimeString():'● Ongoing'}</div>
+        <div style="font-weight:600;font-size:13px">${esc(s.name)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${s.location||''} | ${new Date(s.started_at).toLocaleDateString()} ${new Date(s.started_at).toLocaleTimeString()}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${s.ended_at?'Ended: '+new Date(s.ended_at).toLocaleTimeString():'<span style="color:var(--success)">Ongoing</span>'}</div>
       </div>
-      <a href="/api/session/${s.id}/export" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-excel me-1"></i>Export</a>
+      <a href="/api/session/${s.id}/export" class="export-btn"><i class="bi bi-file-earmark-pdf"></i> Export</a>
     </div>`).join("");
 }
 
-// ── tab switcher ──────────────────────────────────────────────────────────────
-function rpTab(el, targetId){
-  document.querySelectorAll(".rp-tab").forEach(t=>t.classList.remove("active"));
-  el.classList.add("active");
-  ["rp-stats","rp-alerts","rp-hist"].forEach(id=>{
-    document.getElementById(id).classList.toggle("d-none", id!==targetId);
+// ── tab switcher ───────────────────────────────────────────────────────────────
+function switchTab(el,targetId){
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['tab-teach','tab-analytics','tab-alerts'].forEach(id=>{
+    document.getElementById(id).classList.toggle('hidden',id!==targetId);
   });
-  if(targetId==="rp-hist") loadHistoryPanel();
 }
 
-async function loadHistoryPanel(){
-  const r=await fetch("/api/sessions");
-  const sessions=await r.json();
-  const list=document.getElementById("history-list");
-  list.innerHTML=sessions.slice(0,10).map(s=>`
-    <div class="h-item">
-      <div style="font-weight:600;font-size:.82rem">${esc(s.name)}</div>
-      <div style="font-size:.7rem;color:var(--muted)">${new Date(s.started_at).toLocaleDateString()}</div>
-      <a href="/api/session/${s.id}/export" class="btn btn-xs btn-outline-secondary" style="font-size:.65rem;padding:2px 6px;margin-top:4px"><i class="bi bi-download"></i> Excel</a>
-    </div>`).join("")||"<div class='text-muted' style='font-size:.8rem'>No sessions yet.</div>";
-}
-
-// ── toast ─────────────────────────────────────────────────────────────────────
-function showToast(msg, type="info", duration=3000){
+// ── toast ──────────────────────────────────────────────────────────────────────
+function showToast(msg,type="info",duration=3000){
   const t=document.createElement("div");
-  t.className=`alert-toast alert alert-${type} alert-dismissible shadow-sm`;
-  t.innerHTML=`${msg}<button type="button" class="btn-close btn-close-white" onclick="this.parentElement.remove()"></button>`;
+  t.className="alert-toast toast-"+type;
+  t.innerHTML=msg+'<button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(), duration);
+  setTimeout(()=>{if(t.parentElement)t.remove();},duration);
 }
 
-// ── utils ─────────────────────────────────────────────────────────────────────
-function esc(s){ const d=document.createElement("div");d.textContent=s||"";return d.innerHTML; }
-function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+// ── utils ──────────────────────────────────────────────────────────────────────
+function esc(s){const d=document.createElement("div");d.textContent=s||"";return d.innerHTML;}
+function initials(name){return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();}
 
-// ── mic wave polling (independent of WebSocket, every 300 ms) ────────────────
+// ── mic wave polling (every 300ms) ─────────────────────────────────────────────
 setInterval(async function(){
   if(!sessionId) return;
   try{
@@ -1047,64 +1092,60 @@ setInterval(async function(){
       if(!r.ok) throw new Error(r.status);
       return r.json();
     });
-    setMicWave("mic1-wave","mic1-icon", d.rms1||0, !!d.mic1_on);
-    setMicWave("mic2-wave","mic2-icon", d.rms2||0, !!d.mic2_on);
+    setMicWave("mic1-wave","mic1-icon",d.rms1||0,!!d.mic1_on);
+    setMicWave("mic2-wave","mic2-icon",d.rms2||0,!!d.mic2_on);
   }catch(e){
-    // server not yet ready — show both as off
     setMicWave("mic1-wave","mic1-icon",0,false);
     setMicWave("mic2-wave","mic2-icon",0,false);
   }
-}, 300);
+},300);
 
-// ── teach buttons (dashboard) ────────────────────────────────────────────────
-const TEACH_EMOTIONS = ["Anger","Disgust","Fear","Happiness","Neutral","Sadness","Surprise","Contempt","Anxiety","Helplessness","Disappointment"];
-const TEACH_EMOJIS   = ["😠","🤢","😨","😊","😐","😢","😲","😒","😰","😞","😔"];
-const dtGrid = document.getElementById('dash-teach-grid');
-TEACH_EMOTIONS.forEach((emo, idx) => {
-  const btn = document.createElement('button');
-  btn.style.cssText = 'padding:5px 3px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:9px;font-weight:600;text-align:center;white-space:nowrap;transition:all .15s';
-  btn.textContent = TEACH_EMOJIS[idx] + ' ' + emo;
-  btn.onmouseenter = () => { btn.style.borderColor = 'var(--accent)'; btn.style.background = '#1f6feb22'; };
-  btn.onmouseleave = () => { btn.style.borderColor = 'var(--border)'; btn.style.background = 'var(--card)'; };
-  btn.onclick = () => dashTeach(idx, btn);
+// ── teach buttons ──────────────────────────────────────────────────────────────
+const dtGrid=document.getElementById('dash-teach-grid');
+EMOTIONS.forEach((emo,idx)=>{
+  const btn=document.createElement('button');
+  btn.className='teach-btn';
+  btn.innerHTML=faceSmall(emo)+emo;
+  btn.onclick=()=>dashTeach(idx,btn);
   dtGrid.appendChild(btn);
 });
 
-function dashTeach(idx, btn) {
-  btn.disabled = true; btn.style.opacity = '0.5';
-  document.getElementById('dash-teach-feedback').textContent = 'Teaching: ' + TEACH_EMOTIONS[idx] + '...';
-  fetch('/api/teach', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({emotion_idx: idx})
+function dashTeach(idx,btn){
+  btn.disabled=true;btn.style.opacity='0.5';
+  document.getElementById('dash-teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';
+  fetch('/api/teach',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({emotion_idx:idx})
   })
-  .then(r => { if (!r.ok) return r.json().then(e => { throw e; }); return r.json(); })
-  .then(d => {
-    btn.style.borderColor = '#3fb950'; btn.style.background = '#1a3a1a';
-    setTimeout(() => { btn.style.borderColor = 'var(--border)'; btn.style.background = 'var(--card)'; }, 600);
-    document.getElementById('dash-teach-count').textContent = d.teach_count + ' corrections';
-    document.getElementById('dash-teach-feedback').textContent =
-      'Taught: ' + d.taught_emotion + ' (loss: ' + d.loss + ') → now: ' + d.new_prediction;
+  .then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();})
+  .then(d=>{
+    btn.classList.add('taught');
+    setTimeout(()=>btn.classList.remove('taught'),600);
+    document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
+    document.getElementById('dash-teach-feedback').textContent=
+      'Taught: '+d.taught_emotion+' (loss: '+d.loss+') -> now: '+d.new_prediction;
   })
-  .catch(e => {
-    document.getElementById('dash-teach-feedback').textContent = 'Error: ' + (e.detail || JSON.stringify(e));
+  .catch(e=>{
+    document.getElementById('dash-teach-feedback').textContent='Error: '+(e.detail||JSON.stringify(e));
   })
-  .finally(() => { btn.disabled = false; btn.style.opacity = '1'; });
+  .finally(()=>{btn.disabled=false;btn.style.opacity='1';});
 }
 
-function dashTeachSave() {
-  fetch('/api/teach/save', {method: 'POST'}).then(r => r.json()).then(d => {
-    document.getElementById('dash-teach-feedback').textContent = 'Checkpoint saved (' + d.teach_count + ' steps)';
+function dashTeachSave(){
+  fetch('/api/teach/save',{method:'POST'}).then(r=>r.json()).then(d=>{
+    document.getElementById('dash-teach-feedback').textContent='Checkpoint saved ('+d.teach_count+' steps)';
   });
 }
 
-setInterval(() => {
-  fetch('/api/teach/status').then(r => r.json()).then(d => {
-    document.getElementById('dash-teach-buffer').textContent = d.buffer_size;
-    document.getElementById('dash-teach-count').textContent = d.teach_count + ' corrections';
-  }).catch(() => {});
-}, 3000);
+setInterval(()=>{
+  fetch('/api/teach/status').then(r=>r.json()).then(d=>{
+    document.getElementById('dash-teach-buffer').textContent=d.buffer_size;
+    document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
+  }).catch(()=>{});
+},3000);
 
-// ── boot ──────────────────────────────────────────────────────────────────────
+// ── init ───────────────────────────────────────────────────────────────────────
+document.getElementById("face-container").innerHTML=faceSVG("Neutral");
 connectWS();
 </script>
 </body>

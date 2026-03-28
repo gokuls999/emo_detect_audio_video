@@ -1,0 +1,36 @@
+# MSTDN-A CPU Requirements
+# Install with: pip install -r requirements-cpu.txt
+
+# PyTorch CPU-only
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchaudio
+
+# Audio processing
+librosa
+sounddevice
+
+# Web server
+fastapi
+uvicorn[standard]
+pydantic
+
+# Computer vision / face detection
+opencv-python
+deepface
+tf-keras
+tensorflow-cpu
+
+# Data / Science
+numpy
+scipy
+pandas
+
+# YouTube audio extraction
+yt-dlp
+
+# FFmpeg wrapper (bundles ffmpeg binary)
+imageio-ffmpeg
+
+# Transformers (offline mode used at runtime)
+transformers
