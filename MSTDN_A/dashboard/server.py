@@ -786,6 +786,9 @@ class YTState:
     BUFFER_SIZE:  int              = 8      # keep last 8 chunks (~16s audio)
     teach_count:  int              = 0      # total teach steps this session
     teach_lock:   "threading.Lock" = None   # prevent concurrent training
+    # Auto-learn
+    auto_learn:        bool        = False  # auto teach from own predictions
+    last_auto_teach:   float       = 0.0   # throttle timer
 
 yt_state  = YTState()
 yt_state.teach_lock = threading.Lock()
@@ -918,6 +921,25 @@ def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
             }
         finally:
             _model.eval()
+
+# Auto-learn constants
+AUTO_LEARN_CONF_THRESHOLD = 0.62   # only teach if model is ≥62% confident
+AUTO_LEARN_COOLDOWN       = 12.0   # seconds between auto-teach steps
+
+def _auto_teach(idx: int):
+    """Called from _yt_infer thread — throttled pseudo-label self-training."""
+    now = time.time()
+    if now - yt_state.last_auto_teach < AUTO_LEARN_COOLDOWN:
+        return
+    yt_state.last_auto_teach = now
+    result = do_teach_step(idx, source="yt")
+    if result.get("success"):
+        _yt_bcast_sync({
+            "type":          "auto_teach_ack",
+            "taught_emotion": result["taught_emotion"],
+            "loss":           result["loss"],
+            "teach_count":    result["teach_count"],
+        })
 
 # -- audio reader: ffmpeg pipe → queue ----------------------------------------
 def _yt_audio_reader():
@@ -1072,6 +1094,10 @@ def _yt_infer():
             }
             yt_state.latest = result
             _yt_bcast_sync(result)
+
+            # Auto-learn: always runs when video is playing and confidence is high enough
+            if float(probs[idx]) >= AUTO_LEARN_CONF_THRESHOLD:
+                threading.Thread(target=_auto_teach, args=(idx,), daemon=True).start()
         except Exception as e:
             print(f"[yt_infer] {e}")
 
@@ -1228,6 +1254,8 @@ def yt_teach(body: YTTeachIn):
     result = do_teach_step(body.emotion_idx)
     if not result["success"]:
         raise HTTPException(400, result["error"])
+    # Manual correction overrides auto-learn — pause auto for a full cooldown cycle
+    yt_state.last_auto_teach = time.time()
     _yt_bcast_sync({"type": "teach_ack", **result})
     return result
 
@@ -1243,7 +1271,18 @@ def yt_teach_status():
         "buffer_size": len(yt_state.audio_buffer),
         "configured": _online_configured,
         "checkpoint": str(ONLINE_CKPT),
+        "auto_learn": yt_state.auto_learn,
     }
+
+class AutoLearnIn(BaseModel):
+    enabled: bool
+
+@app.post("/api/yt/auto_learn")
+def yt_auto_learn(body: AutoLearnIn):
+    yt_state.auto_learn = body.enabled
+    yt_state.last_auto_teach = 0.0  # reset cooldown on toggle
+    print(f"[online] auto_learn {'ON' if body.enabled else 'OFF'}")
+    return {"auto_learn": yt_state.auto_learn}
 
 @app.websocket("/ws/yt")
 async def ws_yt_ep(ws: WebSocket):
@@ -1258,6 +1297,6 @@ async def ws_yt_ep(ws: WebSocket):
 # ── entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    print("\n  MSTDN-A Dashboard >> http://localhost:8000\n")
-    uvicorn.run("dashboard.server:app", host="0.0.0.0", port=8000,
-                reload=False, log_level="warning")
+    print(f"\n  MSTDN-A Dashboard >> http://localhost:8000")
+    print(f"  YT Test           >> http://localhost:8000/yt_test\n")
+    uvicorn.run("dashboard.server:app", host="0.0.0.0", port=8000, reload=False, log_level="warning")

@@ -2,128 +2,158 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MSTDN-A — YouTube Test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSTDN-A | Emotion Analysis</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;padding:20px}
+html,body{height:100%;overflow:hidden}
+body{background:#f5f6f8;color:#1a1a2e;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
 
-/* header */
-.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #21262d}
-.hdr-title{display:flex;align-items:center;gap:10px}
-.hdr-title h1{font-size:18px;font-weight:700;color:#c9d1d9}
-.hdr-title span{font-size:13px;color:#8b949e;font-weight:400}
-.badge-live{background:#1a3a1a;color:#3fb950;border:1px solid #2ea04333;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.5px}
-.back-link{color:#58a6ff;text-decoration:none;font-size:13px;opacity:.7}
-.back-link:hover{opacity:1}
+/* top nav — compact */
+.topnav{background:#fff;border-bottom:1px solid #e2e5e9;padding:0 24px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topnav-left{display:flex;align-items:center;gap:14px}
+.logo{font-size:16px;font-weight:700;color:#1a1a2e;letter-spacing:-.3px}
+.logo span{color:#6366f1;font-weight:800}
+.nav-divider{width:1px;height:20px;background:#e2e5e9}
+.nav-label{font-size:12px;color:#64748b;font-weight:500}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.3px}
+.status-idle{background:#f1f5f9;color:#94a3b8}
+.status-live{background:#dcfce7;color:#16a34a}
+.status-ended{background:#fef3c7;color:#d97706}
+.status-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.back-link{color:#6366f1;text-decoration:none;font-size:12px;font-weight:500}
+.back-link:hover{text-decoration:underline}
 
 /* url bar */
-.url-bar{display:flex;gap:8px;margin-bottom:16px}
-.url-input{flex:1;padding:9px 14px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:13px;outline:none;transition:border .2s}
-.url-input:focus{border-color:#58a6ff}
-.url-input::placeholder{color:#484f58}
-button{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.3px;transition:opacity .15s}
-button:hover{opacity:.85}
-.btn-load{background:#238636;color:#fff}
-.btn-stop{background:#da3633;color:#fff}
-.btn-mute{background:#1f6feb;color:#fff;min-width:110px}
+.url-bar{display:flex;gap:6px;padding:6px 24px;background:#fff;border-bottom:1px solid #e2e5e9;flex-shrink:0}
+.url-input{flex:1;padding:7px 14px;background:#f8fafc;border:1px solid #e2e5e9;border-radius:6px;color:#1a1a2e;font-size:13px;outline:none;transition:border .2s}
+.url-input:focus{border-color:#6366f1}
+.url-input::placeholder{color:#94a3b8}
+.btn{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .12s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{opacity:.9}
+.btn-load{background:#6366f1;color:#fff}
+.btn-stop{background:#ef4444;color:#fff}
+.btn-mute{background:#f1f5f9;color:#475569;border:1px solid #e2e5e9;min-width:100px}
+.btn-mute.muted{background:#7c3aed;color:#fff;border-color:#7c3aed}
 
-/* main layout */
-.main{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+/* main — fills remaining space */
+.main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;min-height:0}
 
-/* left: youtube + title + mode */
-.yt-wrap{display:flex;flex-direction:column;gap:8px}
-.yt-placeholder{width:100%;aspect-ratio:16/9;background:#161b22;border:1px solid #30363d;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
-.yt-placeholder svg{opacity:.2}
-.yt-placeholder p{color:#484f58;font-size:13px}
-#yt-frame-wrap{width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid #30363d;display:none}
+/* left column: video top, waveform bottom */
+.left-col{display:flex;flex-direction:column;padding:12px;gap:8px;overflow:hidden}
+.yt-placeholder{flex:1;min-height:0;background:#fff;border:2px dashed #e2e5e9;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.yt-placeholder svg{color:#cbd5e1}
+.yt-placeholder p{color:#94a3b8;font-size:13px}
+#yt-frame-wrap{flex:1;min-height:0;border-radius:10px;overflow:hidden;border:1px solid #e2e5e9;display:none}
 #yt-iframe{width:100%;height:100%;border:none;display:block}
-.yt-meta{display:flex;align-items:center;justify-content:space-between}
-.yt-title{font-size:12px;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
-.mode-pill{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
-.mode-idle{background:#21262d;color:#8b949e}
-.mode-audio{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
-.mode-face{background:#2ea04322;color:#3fb950;border:1px solid #2ea04344}
+.yt-meta{display:flex;align-items:center;justify-content:space-between;padding:2px 4px;flex-shrink:0}
+.yt-title{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+.mode-pill{padding:2px 10px;border-radius:20px;font-size:10px;font-weight:600}
+.mode-idle{background:#f1f5f9;color:#94a3b8}
+.mode-audio{background:#ede9fe;color:#7c3aed}
+.mode-face{background:#dcfce7;color:#16a34a}
+.mode-audioface{background:#fef3c7;color:#d97706}
 
-/* audio wave panel */
-.audio-panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 14px;margin-top:4px}
-.audio-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.audio-panel-title{font-size:10px;font-weight:700;color:#484f58;letter-spacing:.5px}
-.audio-source-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.3px}
-.tag-audio{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
-.tag-face{background:#2ea04322;color:#3fb950;border:1px solid #2ea04344}
-.tag-idle{background:#21262d;color:#484f58}
-.wave-canvas{width:100%;height:40px;border-radius:4px;background:#0d1117}
-.audio-rms-row{display:flex;align-items:center;gap:8px;margin-top:6px}
-.rms-bar-track{flex:1;height:6px;background:#21262d;border-radius:3px;overflow:hidden}
-.rms-bar-fill{height:100%;border-radius:3px;background:#58a6ff;transition:width .15s ease;width:0}
-.rms-val{font-size:9px;color:#484f58;min-width:40px;text-align:right}
+/* waveform — compact */
+.wave-card{background:#fff;border:1px solid #e2e5e9;border-radius:8px;padding:8px 12px;flex-shrink:0}
+.wave-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.wave-title{font-size:10px;font-weight:600;color:#64748b;letter-spacing:.5px;text-transform:uppercase}
+.wave-tag{font-size:9px;font-weight:600;padding:2px 8px;border-radius:20px}
+.tag-audio{background:#ede9fe;color:#7c3aed}
+.tag-face{background:#dcfce7;color:#16a34a}
+.tag-idle{background:#f1f5f9;color:#94a3b8}
+.wave-canvas{width:100%;height:48px;border-radius:6px;background:#f8fafc}
+.rms-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.rms-track{flex:1;height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden}
+.rms-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#818cf8,#6366f1);transition:width .15s;width:0}
+.rms-val{font-size:10px;color:#94a3b8;min-width:40px;text-align:right;font-family:monospace}
 
-/* right: emotion card */
-.emo-card{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden}
-.emo-accent{height:3px;background:#58a6ff}
-.emo-body{padding:20px}
-.emo-icon{font-size:56px;text-align:center;line-height:1;margin-bottom:6px;transition:all .3s}
-.emo-name{font-size:22px;font-weight:700;text-align:center;color:#58a6ff;margin-bottom:2px}
-.emo-conf{font-size:11px;text-align:center;color:#8b949e;margin-bottom:16px}
+/* right column: analysis */
+.right-col{display:flex;flex-direction:column;padding:12px 12px 12px 0;overflow:hidden;min-height:0}
+.analysis-card{background:#fff;border:1px solid #e2e5e9;border-radius:10px;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.analysis-accent{height:3px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:background .3s;flex-shrink:0}
+.analysis-body{padding:12px 16px;flex:1;overflow-y:auto;min-height:0}
 
-.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
-.stat-box{background:#0d1117;border-radius:6px;padding:8px;text-align:center}
-.stat-label{font-size:9px;color:#484f58;letter-spacing:.5px;font-weight:700;margin-bottom:2px}
-.stat-val{font-size:16px;font-weight:700}
+/* detected emotion — horizontal layout */
+.detected-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.face-icon{width:52px;height:52px;flex-shrink:0}
+.face-icon circle,.face-icon ellipse,.face-icon path,.face-icon line{transition:all .3s}
+.detected-info{flex:1}
+.emo-label{font-size:24px;font-weight:700;color:#1a1a2e;transition:color .3s;line-height:1.1}
+.emo-conf{font-size:11px;color:#94a3b8;font-weight:500}
 
-.bars-wrap{display:flex;flex-direction:column;gap:5px}
-.bar-row{display:grid;grid-template-columns:80px 1fr 38px;align-items:center;gap:6px}
-.bar-lbl{font-size:10px;color:#8b949e;text-align:right}
-.bar-track{height:7px;background:#21262d;border-radius:4px;overflow:hidden}
-.bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
-.bar-pct{font-size:10px;color:#484f58;text-align:right}
+/* metrics — inline */
+.metrics{display:flex;gap:6px;margin-bottom:10px}
+.metric-card{flex:1;background:#f8fafc;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #f1f5f9}
+.metric-label{font-size:9px;color:#94a3b8;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.metric-val{font-size:15px;font-weight:700}
+.metric-stress .metric-val{color:#ef4444}
+.metric-valence .metric-val{color:#22c55e}
+.metric-arousal .metric-val{color:#f59e0b}
 
 /* alert */
-.alert-banner{background:#da363322;border:1px solid #da363344;color:#ff7b72;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;margin-top:10px;display:none;text-align:center}
+.alert-banner{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;margin-bottom:8px;display:none;text-align:center}
 
-/* teach panel */
-.teach-panel{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 14px;margin-top:12px}
-.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.teach-title{font-size:10px;font-weight:700;color:#484f58;letter-spacing:.5px}
-.teach-count{font-size:10px;color:#58a6ff;font-weight:600}
-.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.teach-btn{padding:5px 3px;border-radius:5px;border:1px solid #30363d;background:#161b22;color:#c9d1d9;cursor:pointer;font-size:9px;font-weight:600;transition:all .15s;text-align:center;white-space:nowrap}
-.teach-btn:hover{border-color:#58a6ff;background:#1f6feb22}
-.teach-btn.taught{border-color:#3fb950;background:#1a3a1a;animation:flash .4s}
-@keyframes flash{0%{background:#3fb95066}100%{background:#1a3a1a}}
-.teach-feedback{font-size:10px;color:#8b949e;margin-top:8px;min-height:16px;text-align:center}
-.teach-save-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
-.teach-save-btn{padding:4px 10px;border-radius:4px;border:1px solid #30363d;background:#21262d;color:#8b949e;cursor:pointer;font-size:9px;font-weight:700}
-.teach-save-btn:hover{border-color:#58a6ff;color:#c9d1d9}
-.mode-audioface{background:#d2992222;color:#d29922;border:1px solid #d2992244}
+/* distribution bars — compact */
+.dist-section{margin-bottom:8px}
+.dist-title{font-size:10px;font-weight:600;color:#94a3b8;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px}
+.dist-row{display:grid;grid-template-columns:75px 1fr 30px;align-items:center;gap:4px;margin-bottom:2px}
+.dist-label{font-size:10px;color:#475569;text-align:right;font-weight:500}
+.dist-track{height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden}
+.dist-fill{height:100%;border-radius:3px;transition:width .4s}
+.dist-pct{font-size:10px;color:#94a3b8;text-align:right;font-family:monospace}
+
+/* teach panel — compact */
+.teach-section{border-top:1px solid #f1f5f9;padding-top:8px}
+.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.teach-title{font-size:10px;font-weight:600;color:#475569;letter-spacing:.3px}
+.teach-count{font-size:10px;color:#6366f1;font-weight:600}
+
+/* auto-learn badge dot */
+.auto-badge-dot{width:6px;height:6px;border-radius:50%;background:#16a34a;animation:blink 1s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.teach-btn{padding:5px 4px 6px;border-radius:6px;border:1px solid #e2e5e9;background:#fff;color:#475569;cursor:pointer;font-size:10px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
+.teach-btn:hover{border-color:#6366f1;background:#f5f3ff;color:#6366f1}
+.teach-btn:active{transform:scale(.97)}
+.teach-btn.taught{border-color:#22c55e;background:#f0fdf4;color:#16a34a;animation:pulse .4s}
+.teach-face{width:18px;height:18px;display:block;margin:0 auto 2px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}100%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+.teach-feedback{font-size:10px;color:#94a3b8;margin-top:4px;min-height:14px;text-align:center}
+.teach-footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.teach-buffer{font-size:10px;color:#94a3b8}
+.btn-save{padding:5px 12px;border-radius:6px;border:1px solid #e2e5e9;background:#f8fafc;color:#475569;cursor:pointer;font-size:10px;font-weight:600}
+.btn-save:hover{border-color:#6366f1;color:#6366f1}
 </style>
 </head>
 <body>
 
-<div class="hdr">
-  <div class="hdr-title">
-    <h1>MSTDN-A <span>YouTube Emotion Test</span></h1>
-    <span class="badge-live" id="live-badge">IDLE</span>
+<div class="topnav">
+  <div class="topnav-left">
+    <div class="logo"><span>MSTDN</span>-A</div>
+    <div class="nav-divider"></div>
+    <div class="nav-label">Emotion Analysis</div>
+    <div class="status-chip status-idle" id="status-chip">
+      <div class="status-dot"></div>
+      <span id="status-text">Idle</span>
+    </div>
   </div>
-  <a href="/" class="back-link">← Dashboard</a>
+  <a href="/" class="back-link">Back to Dashboard</a>
 </div>
 
 <div class="url-bar">
-  <input class="url-input" id="yt-url" type="text"
-         placeholder="Paste YouTube URL — e.g. https://www.youtube.com/watch?v=..." />
-  <button class="btn-load" onclick="loadVideo()">Load</button>
-  <button class="btn-stop" onclick="stopVideo()">Stop</button>
-  <button class="btn-mute" id="mute-btn" onclick="toggleMute()">Mute Audio</button>
+  <input class="url-input" id="yt-url" type="text" placeholder="Paste a YouTube URL..." />
+  <button class="btn btn-load" onclick="loadVideo()">Load</button>
+  <button class="btn btn-stop" onclick="stopVideo()">Stop</button>
+  <button class="btn btn-mute" id="mute-btn" onclick="toggleMute()">Mute</button>
 </div>
 
 <div class="main">
 
-  <!-- left: player + audio panel -->
-  <div class="yt-wrap">
+  <!-- LEFT: video + waveform -->
+  <div class="left-col">
     <div class="yt-placeholder" id="yt-placeholder">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c9d1d9" stroke-width="1">
-        <polygon points="5 3 19 12 5 21 5 3"/>
-      </svg>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       <p>Paste a YouTube URL above and click Load</p>
     </div>
     <div id="yt-frame-wrap">
@@ -131,61 +161,71 @@ button:hover{opacity:.85}
     </div>
     <div class="yt-meta">
       <div class="yt-title" id="yt-title"></div>
-      <div class="mode-pill mode-idle" id="mode-pill">IDLE</div>
+      <div class="mode-pill mode-idle" id="mode-pill">Idle</div>
     </div>
-
-    <!-- audio waveform panel -->
-    <div class="audio-panel">
-      <div class="audio-panel-hdr">
-        <div class="audio-panel-title">AUDIO STREAM</div>
-        <div class="audio-source-tag tag-idle" id="source-tag">IDLE</div>
+    <div class="wave-card">
+      <div class="wave-hdr">
+        <div class="wave-title">Audio Waveform</div>
+        <div class="wave-tag tag-idle" id="source-tag">Idle</div>
       </div>
-      <canvas class="wave-canvas" id="wave-canvas" height="40"></canvas>
-      <div class="audio-rms-row">
-        <div class="rms-bar-track"><div class="rms-bar-fill" id="rms-fill"></div></div>
-        <div class="rms-val" id="rms-val">0.00</div>
+      <canvas class="wave-canvas" id="wave-canvas" height="48"></canvas>
+      <div class="rms-row">
+        <div class="rms-track"><div class="rms-fill" id="rms-fill"></div></div>
+        <div class="rms-val" id="rms-val">0.0000</div>
       </div>
     </div>
   </div>
 
-  <!-- right: emotion -->
-  <div class="emo-card">
-    <div class="emo-accent" id="emo-accent"></div>
-    <div class="emo-body">
-      <div class="emo-icon" id="emoji">😐</div>
-      <div class="emo-name" id="emo-name">Waiting...</div>
-      <div class="emo-conf" id="emo-conf">—</div>
+  <!-- RIGHT: analysis -->
+  <div class="right-col">
+    <div class="analysis-card">
+      <div class="analysis-accent" id="emo-accent"></div>
+      <div class="analysis-body">
 
-      <div class="stats-row">
-        <div class="stat-box">
-          <div class="stat-label">STRESS</div>
-          <div class="stat-val" id="stress" style="color:#f85149">—</div>
+        <div class="detected-row">
+          <div id="face-container"></div>
+          <div class="detected-info">
+            <div class="emo-label" id="emo-name">Waiting...</div>
+            <div class="emo-conf" id="emo-conf">No data yet</div>
+          </div>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">VALENCE</div>
-          <div class="stat-val" id="valence" style="color:#3fb950">—</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">AROUSAL</div>
-          <div class="stat-val" id="arousal" style="color:#d29922">—</div>
-        </div>
-      </div>
 
-      <div class="bars-wrap" id="bars"></div>
-      <div class="alert-banner" id="alert-banner">⚠ High Stress Detected</div>
+        <div class="metrics">
+          <div class="metric-card metric-stress"><div class="metric-label">Stress</div><div class="metric-val" id="stress">&mdash;</div></div>
+          <div class="metric-card metric-valence"><div class="metric-label">Valence</div><div class="metric-val" id="valence">&mdash;</div></div>
+          <div class="metric-card metric-arousal"><div class="metric-label">Arousal</div><div class="metric-val" id="arousal">&mdash;</div></div>
+        </div>
 
-      <!-- teach panel -->
-      <div class="teach-panel">
-        <div class="teach-hdr">
-          <div class="teach-title">TEACH MODEL</div>
-          <div class="teach-count" id="teach-count">0 corrections</div>
+        <div class="alert-banner" id="alert-banner">High Stress Detected</div>
+
+        <div class="dist-section">
+          <div class="dist-title">Distribution</div>
+          <div id="bars"></div>
         </div>
-        <div class="teach-grid" id="teach-grid"></div>
-        <div class="teach-feedback" id="teach-feedback">Click an emotion to correct the model</div>
-        <div class="teach-save-row">
-          <span style="font-size:9px;color:#484f58">Buffer: <span id="teach-buffer">0</span> chunks</span>
-          <button class="teach-save-btn" onclick="teachSave()">Save Checkpoint</button>
+
+        <div class="teach-section">
+          <div class="teach-hdr">
+            <div class="teach-title">Training</div>
+            <div class="teach-count" id="teach-count">0 corrections</div>
+          </div>
+          <!-- auto-learn live status strip -->
+          <div id="auto-strip" style="display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:5px 10px;margin-bottom:6px;font-size:10px;color:#166534">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span class="auto-badge-dot" style="display:inline-block"></span>
+              <span style="font-weight:700">Auto Learn</span>
+              <span style="color:#6b7280;font-weight:400">— runs in background while video plays</span>
+            </div>
+            <span id="auto-last" style="color:#15803d;font-style:italic"></span>
+          </div>
+          <!-- manual teach grid — always visible -->
+          <div class="teach-grid" id="teach-grid"></div>
+          <div class="teach-feedback" id="teach-feedback">Manual correction overrides auto-learn for 12s</div>
+          <div class="teach-footer">
+            <span class="teach-buffer">Buffer: <span id="teach-buffer">0</span></span>
+            <button class="btn-save" onclick="teachSave()">Save Checkpoint</button>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -193,235 +233,124 @@ button:hover{opacity:.85}
 </div>
 
 <script>
-const EMOTIONS = ["Anger","Disgust","Fear","Happiness","Neutral","Sadness","Surprise","Contempt","Anxiety","Helplessness","Disappointment"];
-const COLORS   = ["#f85149","#a371f7","#ff9e64","#3fb950","#8b949e","#79c0ff","#d29922","#6e7681","#ffa657","#6e7681","#6e7681"];
-const ACCENT_COLORS = { Anger:"#f85149", Happiness:"#3fb950", Sadness:"#79c0ff", Fear:"#ff9e64", Surprise:"#d29922", Disgust:"#a371f7" };
+const EMOTIONS=["Anger","Disgust","Fear","Happiness","Neutral","Sadness","Surprise","Contempt","Anxiety","Helplessness","Disappointment"];
+const BAR_COLORS=["#ef4444","#a855f7","#f97316","#22c55e","#94a3b8","#3b82f6","#eab308","#6b7280","#f97316","#6b7280","#6b7280"];
+const ACCENT_MAP={Anger:"#ef4444",Happiness:"#22c55e",Sadness:"#3b82f6",Fear:"#f97316",Surprise:"#eab308",Disgust:"#a855f7",Neutral:"#6366f1"};
 
-let muted = false;
-let ws    = null;
-
-// -- audio waveform history ---------------------------------------------------
-const waveCanvas = document.getElementById('wave-canvas');
-const waveCtx    = waveCanvas.getContext('2d');
-const WAVE_HIST  = 80;
-let waveHistory  = new Array(WAVE_HIST).fill(0);
-
-function drawWave() {
-  const w = waveCanvas.width = waveCanvas.clientWidth;
-  const h = waveCanvas.height;
-  waveCtx.clearRect(0, 0, w, h);
-  const barW = w / WAVE_HIST;
-  const mid  = h / 2;
-  for (let i = 0; i < WAVE_HIST; i++) {
-    const v  = Math.min(waveHistory[i] * 8, 1);   // scale RMS for visibility
-    const bh = Math.max(v * (h - 4), 1);
-    const x  = i * barW;
-    const c  = v > 0.05 ? '#58a6ff' : '#21262d';
-    waveCtx.fillStyle = c;
-    waveCtx.fillRect(x + 1, mid - bh / 2, barW - 2, bh);
+// SVG face silhouettes
+function faceSVG(emotion,size=52){
+  const s=size,c=s/2,r=s*.38,sc=s/72;
+  const col=ACCENT_MAP[emotion]||'#6366f1';
+  const el=c-10*sc,er=c+10*sc,ey=c-6*sc;
+  const head=`<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${col}" stroke-width="${2*sc}" opacity=".3"/>`;
+  const dot=(x,y,sz)=>`<circle cx="${x}" cy="${y}" r="${sz*sc}" fill="${col}"/>`;
+  const brow=(x1,y1,x2,y2)=>`<line x1="${x1*sc}" y1="${y1*sc}" x2="${x2*sc}" y2="${y2*sc}" stroke="${col}" stroke-width="${1.8*sc}" stroke-linecap="round"/>`;
+  let eyes=dot(el,ey,2.5)+dot(er,ey,2.5),brows='',mouth='';
+  switch(emotion){
+    case'Anger':brows=brow(16,18,24,21)+brow(48,21,56,18);mouth=`<path d="M${22*sc},${46*sc} Q${c},${42*sc} ${50*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Disgust':brows=brow(18,20,26,18)+brow(46,18,54,20);mouth=`<path d="M${24*sc},${44*sc} Q${30*sc},${48*sc} ${36*sc},${43*sc} Q${42*sc},${40*sc} ${48*sc},${44*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;eyes=dot(el,ey,2)+dot(er,ey,2);break;
+    case'Fear':brows=brow(18,22,26,17)+brow(46,17,54,22);eyes=`<ellipse cx="${el}" cy="${ey}" rx="${3*sc}" ry="${3.5*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${el}" cy="${ey}" r="${1.5*sc}" fill="${col}"/><ellipse cx="${er}" cy="${ey}" rx="${3*sc}" ry="${3.5*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${er}" cy="${ey}" r="${1.5*sc}" fill="${col}"/>`;mouth=`<ellipse cx="${c}" cy="${46*sc}" rx="${6*sc}" ry="${4*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}"/>`;break;
+    case'Happiness':brows=brow(18,20,26,18)+brow(46,18,54,20);mouth=`<path d="M${22*sc},${42*sc} Q${c},${54*sc} ${50*sc},${42*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Neutral':mouth=`<line x1="${26*sc}" y1="${44*sc}" x2="${46*sc}" y2="${44*sc}" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Sadness':brows=brow(18,18,26,22)+brow(46,22,54,18);mouth=`<path d="M${24*sc},${46*sc} Q${c},${40*sc} ${48*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Surprise':brows=brow(18,20,26,15)+brow(46,15,54,20);eyes=`<ellipse cx="${el}" cy="${ey}" rx="${3*sc}" ry="${4*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${el}" cy="${ey}" r="${1.5*sc}" fill="${col}"/><ellipse cx="${er}" cy="${ey}" rx="${3*sc}" ry="${4*sc}" fill="none" stroke="${col}" stroke-width="${1.5*sc}"/><circle cx="${er}" cy="${ey}" r="${1.5*sc}" fill="${col}"/>`;mouth=`<ellipse cx="${c}" cy="${46*sc}" rx="${5*sc}" ry="${5*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}"/>`;break;
+    case'Contempt':mouth=`<path d="M${24*sc},${44*sc} L${40*sc},${44*sc} Q${48*sc},${42*sc} ${50*sc},${40*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;brows=brow(46,19,54,18);break;
+    case'Anxiety':brows=brow(18,21,26,17)+brow(46,17,54,21);mouth=`<path d="M${24*sc},${44*sc} Q${28*sc},${47*sc} ${32*sc},${43*sc} Q${36*sc},${47*sc} ${40*sc},${43*sc} Q${44*sc},${47*sc} ${48*sc},${44*sc}" fill="none" stroke="${col}" stroke-width="${1.8*sc}" stroke-linecap="round"/>`;break;
+    case'Helplessness':brows=brow(18,18,26,22)+brow(46,22,54,18);mouth=`<path d="M${26*sc},${46*sc} Q${c},${41*sc} ${46*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;break;
+    case'Disappointment':brows=brow(18,19,26,22)+brow(46,22,54,19);mouth=`<path d="M${26*sc},${46*sc} Q${c},${42*sc} ${46*sc},${46*sc}" fill="none" stroke="${col}" stroke-width="${2*sc}" stroke-linecap="round"/>`;eyes=dot(el,ey+2*sc,2.5)+dot(er,ey+2*sc,2.5);break;
   }
+  return`<svg class="face-icon" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">${head}${eyes}${brows}${mouth}</svg>`;
 }
+function faceSmall(e){return faceSVG(e,22).replace('class="face-icon"','class="teach-face"');}
 
-function pushWaveRMS(rms) {
-  waveHistory.push(rms);
-  if (waveHistory.length > WAVE_HIST) waveHistory.shift();
-  drawWave();
-  // update rms bar + value
-  const pct = Math.min(rms * 800, 100);
-  document.getElementById('rms-fill').style.width = pct + '%';
-  document.getElementById('rms-fill').style.background = rms > 0.01 ? '#58a6ff' : '#21262d';
-  document.getElementById('rms-val').textContent = rms.toFixed(4);
+let muted=false,ws=null;
+
+// waveform
+const waveCanvas=document.getElementById('wave-canvas');
+const waveCtx=waveCanvas.getContext('2d');
+const WAVE_HIST=140;
+let waveHistory=new Array(WAVE_HIST).fill(0);
+
+function drawWave(){
+  const w=waveCanvas.width=waveCanvas.clientWidth;
+  const h=waveCanvas.height;
+  const dpr=window.devicePixelRatio||1;
+  waveCanvas.width=w*dpr;waveCanvas.height=h*dpr;
+  waveCtx.scale(dpr,dpr);
+  waveCtx.clearRect(0,0,w,h);
+  const mid=h/2,step=w/(WAVE_HIST-1);
+  const grad=waveCtx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(99,102,241,.15)');grad.addColorStop(.5,'rgba(99,102,241,.02)');grad.addColorStop(1,'rgba(99,102,241,.15)');
+  // top path
+  waveCtx.beginPath();
+  for(let i=0;i<WAVE_HIST;i++){const v=Math.min(waveHistory[i]*5,1),x=i*step,amp=v*(mid-2);if(!i)waveCtx.moveTo(x,mid-amp);else{const px=(i-1)*step,pv=Math.min(waveHistory[i-1]*5,1),pA=pv*(mid-2),cp=(px+x)/2;waveCtx.bezierCurveTo(cp,mid-pA,cp,mid-amp,x,mid-amp);}}
+  for(let i=WAVE_HIST-1;i>=0;i--){const v=Math.min(waveHistory[i]*5,1),x=i*step,amp=v*(mid-2);if(i===WAVE_HIST-1)waveCtx.lineTo(x,mid+amp);else{const nx=(i+1)*step,nv=Math.min(waveHistory[i+1]*5,1),nA=nv*(mid-2),cp=(nx+x)/2;waveCtx.bezierCurveTo(cp,mid+nA,cp,mid+amp,x,mid+amp);}}
+  waveCtx.closePath();waveCtx.fillStyle=grad;waveCtx.fill();
+  // strokes
+  waveCtx.beginPath();for(let i=0;i<WAVE_HIST;i++){const v=Math.min(waveHistory[i]*5,1),x=i*step,amp=v*(mid-2);if(!i)waveCtx.moveTo(x,mid-amp);else{const px=(i-1)*step,pv=Math.min(waveHistory[i-1]*5,1),pA=pv*(mid-2),cp=(px+x)/2;waveCtx.bezierCurveTo(cp,mid-pA,cp,mid-amp,x,mid-amp);}}waveCtx.strokeStyle='#6366f1';waveCtx.lineWidth=1.5;waveCtx.stroke();
+  waveCtx.beginPath();for(let i=0;i<WAVE_HIST;i++){const v=Math.min(waveHistory[i]*5,1),x=i*step,amp=v*(mid-2);if(!i)waveCtx.moveTo(x,mid+amp);else{const px=(i-1)*step,pv=Math.min(waveHistory[i-1]*5,1),pA=pv*(mid-2),cp=(px+x)/2;waveCtx.bezierCurveTo(cp,mid+pA,cp,mid+amp,x,mid+amp);}}waveCtx.strokeStyle='rgba(99,102,241,.4)';waveCtx.lineWidth=1;waveCtx.stroke();
+  waveCtx.beginPath();waveCtx.moveTo(0,mid);waveCtx.lineTo(w,mid);waveCtx.strokeStyle='#e2e5e9';waveCtx.lineWidth=1;waveCtx.stroke();
 }
+function pushWaveRMS(rms){waveHistory.push(rms);if(waveHistory.length>WAVE_HIST)waveHistory.shift();drawWave();document.getElementById('rms-fill').style.width=Math.min(rms*800,100)+'%';document.getElementById('rms-val').textContent=rms.toFixed(4);}
 
-// -- websocket ----------------------------------------------------------------
-function connectWS() {
-  ws = new WebSocket(`ws://${location.host}/ws/yt`);
-  ws.onmessage = e => {
-    const d = JSON.parse(e.data);
-    if (d.type === 'emotion_update' || d.type === 'init') {
-      const src = d.type === 'init' ? d.latest : d;
-      if (src) updateUI(src);
+// websocket
+function connectWS(){
+  ws=new WebSocket(`ws://${location.host}/ws/yt`);
+  ws.onmessage=e=>{
+    const d=JSON.parse(e.data);
+    if(d.type==='emotion_update'||d.type==='init'){const src=d.type==='init'?d.latest:d;if(src)updateUI(src);}
+    if(d.type==='teach_ack')document.getElementById('teach-count').textContent=d.teach_count+' corrections';
+    if(d.type==='auto_teach_ack'){
+      document.getElementById('teach-count').textContent=d.teach_count+' corrections';
+      document.getElementById('auto-last').textContent='Last: '+d.taught_emotion+' (loss '+d.loss+')';
+      document.getElementById('teach-feedback').textContent='Auto-taught: '+d.taught_emotion+' | loss: '+d.loss;
     }
-    if (d.type === 'teach_ack') {
-      document.getElementById('teach-count').textContent = d.teach_count + ' corrections';
-    }
-    if (d.type === 'yt_ended') {
-      document.getElementById('live-badge').textContent = 'ENDED';
-      document.getElementById('live-badge').style.color = '#8b949e';
-      setMode('idle');
-      setSourceTag('idle');
-    }
+    if(d.type==='yt_ended'){setStatus('ended');setMode('idle');setSourceTag('idle');}
   };
-  ws.onclose = () => setTimeout(connectWS, 2000);
+  ws.onclose=()=>setTimeout(connectWS,2000);
+}
+function setStatus(s){const c=document.getElementById('status-chip'),t=document.getElementById('status-text');c.className='status-chip status-'+s;t.textContent=s==='live'?'Live':s==='ended'?'Ended':'Idle';}
+
+function updateUI(d){
+  document.getElementById('face-container').innerHTML=faceSVG(d.emotion||'Neutral');
+  document.getElementById('emo-name').textContent=d.emotion||'Neutral';
+  document.getElementById('emo-conf').textContent=d.confidence!=null?`${(d.confidence*100).toFixed(1)}% confidence`:'No data yet';
+  document.getElementById('stress').textContent=d.stress!=null?(d.stress*100).toFixed(0)+'%':'—';
+  document.getElementById('valence').textContent=d.valence!=null?(d.valence>=0?'+':'')+d.valence.toFixed(2):'—';
+  document.getElementById('arousal').textContent=d.arousal!=null?d.arousal.toFixed(2):'—';
+  const ac=ACCENT_MAP[d.emotion]||'#6366f1';
+  document.getElementById('emo-accent').style.background=ac;
+  document.getElementById('emo-name').style.color=ac;
+  document.getElementById('alert-banner').style.display=d.alert?'block':'none';
+  if(d.probs){const sorted=d.probs.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p);document.getElementById('bars').innerHTML=sorted.map(({p,i})=>`<div class="dist-row"><div class="dist-label">${EMOTIONS[i]}</div><div class="dist-track"><div class="dist-fill" style="width:${(p*100).toFixed(1)}%;background:${BAR_COLORS[i]}"></div></div><div class="dist-pct">${(p*100).toFixed(0)}%</div></div>`).join('');}
+  if(d.audio_rms!=null)pushWaveRMS(d.audio_rms);
+  if(d.mode==='audio+face'){setMode('audioface');setSourceTag('audioface');}else if(d.mode==='audio'){setMode('audio');setSourceTag('audio');}else if(d.mode==='face_only'){setMode('face');setSourceTag('face');}
 }
 
-function updateUI(d) {
-  document.getElementById('emoji').textContent    = d.emoji    || '😐';
-  document.getElementById('emo-name').textContent = d.emotion  || 'Neutral';
-  document.getElementById('emo-conf').textContent = d.confidence != null ? `confidence: ${(d.confidence*100).toFixed(1)}%` : '—';
-  document.getElementById('stress').textContent   = d.stress   != null ? (d.stress*100).toFixed(0)+'%' : '—';
-  document.getElementById('valence').textContent  = d.valence  != null ? (d.valence>=0?'+':'')+d.valence.toFixed(2) : '—';
-  document.getElementById('arousal').textContent  = d.arousal  != null ? d.arousal.toFixed(2) : '—';
+function setMode(m){const p=document.getElementById('mode-pill');p.className='mode-pill mode-'+m;p.textContent=m==='face'?'Face':m==='audio'?'Audio':m==='audioface'?'Audio+Face':'Idle';}
+function setSourceTag(m){const t=document.getElementById('source-tag');t.className='wave-tag tag-'+(m==='audioface'?'audio':m);t.textContent=m==='audio'?'Audio':m==='face'?'Face':m==='audioface'?'Audio+Face':'Idle';}
 
-  const ac = ACCENT_COLORS[d.emotion] || '#58a6ff';
-  document.getElementById('emo-accent').style.background = ac;
-  document.getElementById('emo-name').style.color = ac;
-
-  document.getElementById('alert-banner').style.display = d.alert ? 'block' : 'none';
-
-  if (d.probs) {
-    const sorted = d.probs.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p);
-    document.getElementById('bars').innerHTML = sorted.map(({p,i}) => `
-      <div class="bar-row">
-        <div class="bar-lbl">${EMOTIONS[i]}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:${(p*100).toFixed(1)}%;background:${COLORS[i]}"></div>
-        </div>
-        <div class="bar-pct">${(p*100).toFixed(0)}%</div>
-      </div>`).join('');
-  }
-
-  // audio waveform
-  if (d.audio_rms != null) pushWaveRMS(d.audio_rms);
-
-  // source mode tag
-  if (d.mode === 'audio+face')    { setMode('audioface'); setSourceTag('audioface'); }
-  else if (d.mode === 'audio')    { setMode('audio'); setSourceTag('audio'); }
-  else if (d.mode === 'face_only'){ setMode('face'); setSourceTag('face'); }
+function loadVideo(){
+  const url=document.getElementById('yt-url').value.trim();if(!url){alert('Paste a YouTube URL first');return;}
+  document.getElementById('emo-name').textContent='Loading...';waveHistory=new Array(WAVE_HIST).fill(0);drawWave();
+  fetch('/api/yt/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})})
+  .then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();})
+  .then(d=>{if(d.video_id){document.getElementById('yt-placeholder').style.display='none';document.getElementById('yt-frame-wrap').style.display='block';document.getElementById('yt-iframe').src=`https://www.youtube.com/embed/${d.video_id}?autoplay=1&enablejsapi=1`;document.getElementById('yt-title').textContent=d.title||'';setStatus('live');setMode('audio');setSourceTag('audio');}})
+  .catch(e=>{alert('Error: '+(e.detail||JSON.stringify(e)));document.getElementById('emo-name').textContent='Error';});
 }
+function stopVideo(){fetch('/api/yt/stop',{method:'POST'});document.getElementById('yt-iframe').src='';document.getElementById('yt-frame-wrap').style.display='none';document.getElementById('yt-placeholder').style.display='flex';document.getElementById('yt-title').textContent='';setStatus('idle');setMode('idle');setSourceTag('idle');document.getElementById('emo-name').textContent='Waiting...';muted=false;document.getElementById('mute-btn').textContent='Mute';document.getElementById('mute-btn').classList.remove('muted');waveHistory=new Array(WAVE_HIST).fill(0);drawWave();}
+function toggleMute(){muted=!muted;const b=document.getElementById('mute-btn');b.textContent=muted?'Unmute':'Mute';b.classList.toggle('muted',muted);const f=document.getElementById('yt-iframe');if(f&&f.contentWindow)f.contentWindow.postMessage(JSON.stringify({event:'command',func:muted?'mute':'unMute',args:''}),'*');fetch('/api/yt/mute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({muted})});}
 
-function setMode(m) {
-  const pill = document.getElementById('mode-pill');
-  pill.className = 'mode-pill mode-' + m;
-  pill.textContent = m === 'face' ? 'FACE 100%' : m === 'audio' ? 'AUDIO 100%' : m === 'audioface' ? 'AUDIO+FACE' : 'IDLE';
-}
+connectWS();drawWave();
+document.getElementById('face-container').innerHTML=faceSVG('Neutral');
 
-function setSourceTag(m) {
-  const tag = document.getElementById('source-tag');
-  tag.className = 'audio-source-tag tag-' + (m === 'audioface' ? 'audio' : m);
-  tag.textContent = m === 'audio' ? 'AUDIO 100%' : m === 'face' ? 'FACE 100%' : m === 'audioface' ? 'AUDIO+FACE' : 'IDLE';
-}
+// teach buttons
+const teachGrid=document.getElementById('teach-grid');
+EMOTIONS.forEach((emo,idx)=>{const btn=document.createElement('button');btn.className='teach-btn';btn.innerHTML=faceSmall(emo)+emo;btn.onclick=()=>doTeach(idx,btn);teachGrid.appendChild(btn);});
 
-function loadVideo() {
-  const url = document.getElementById('yt-url').value.trim();
-  if (!url) { alert('Paste a YouTube URL first'); return; }
-
-  document.getElementById('emo-name').textContent = 'Loading...';
-  waveHistory = new Array(WAVE_HIST).fill(0);
-  drawWave();
-
-  fetch('/api/yt/load', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})
-  })
-  .then(r => { if (!r.ok) return r.json().then(e=>{throw e}); return r.json(); })
-  .then(d => {
-    if (d.video_id) {
-      document.getElementById('yt-placeholder').style.display = 'none';
-      document.getElementById('yt-frame-wrap').style.display  = 'block';
-      document.getElementById('yt-iframe').src =
-        `https://www.youtube.com/embed/${d.video_id}?autoplay=1&enablejsapi=1`;
-      document.getElementById('yt-title').textContent = d.title || '';
-      document.getElementById('live-badge').textContent = 'LIVE';
-      document.getElementById('live-badge').style.color = '#3fb950';
-      setMode('audio');
-      setSourceTag('audio');
-    }
-  })
-  .catch(e => {
-    alert('Error: ' + (e.detail || JSON.stringify(e)));
-    document.getElementById('emo-name').textContent = 'Error';
-  });
-}
-
-function stopVideo() {
-  fetch('/api/yt/stop', {method:'POST'});
-  document.getElementById('yt-iframe').src = '';
-  document.getElementById('yt-frame-wrap').style.display  = 'none';
-  document.getElementById('yt-placeholder').style.display = 'flex';
-  document.getElementById('yt-title').textContent = '';
-  document.getElementById('live-badge').textContent = 'IDLE';
-  document.getElementById('live-badge').style.color = '';
-  document.getElementById('emo-name').textContent = 'Waiting...';
-  setMode('idle');
-  setSourceTag('idle');
-  muted = false;
-  const btn = document.getElementById('mute-btn');
-  btn.textContent = 'Mute Audio'; btn.style.background = '#1f6feb';
-  waveHistory = new Array(WAVE_HIST).fill(0);
-  drawWave();
-}
-
-function toggleMute() {
-  muted = !muted;
-  const btn = document.getElementById('mute-btn');
-  btn.textContent = muted ? 'Unmute Audio' : 'Mute Audio';
-  btn.style.background = muted ? '#6e40c9' : '#1f6feb';
-
-  const iframe = document.getElementById('yt-iframe');
-  if (iframe && iframe.contentWindow) {
-    const cmd = muted ? 'mute' : 'unMute';
-    iframe.contentWindow.postMessage(JSON.stringify({event:'command',func:cmd,args:''}), '*');
-  }
-
-  fetch('/api/yt/mute', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({muted})
-  });
-}
-
-connectWS();
-drawWave();
-
-// -- teach buttons -----------------------------------------------------------
-const TEACH_EMOJIS = ["😠","🤢","😨","😊","😐","😢","😲","😒","😰","😞","😔"];
-const teachGrid = document.getElementById('teach-grid');
-EMOTIONS.forEach((emo, idx) => {
-  const btn = document.createElement('button');
-  btn.className = 'teach-btn';
-  btn.textContent = TEACH_EMOJIS[idx] + ' ' + emo;
-  btn.onclick = () => doTeach(idx, btn);
-  teachGrid.appendChild(btn);
-});
-
-function doTeach(idx, btn) {
-  btn.disabled = true;
-  btn.style.opacity = '0.5';
-  document.getElementById('teach-feedback').textContent = 'Teaching: ' + EMOTIONS[idx] + '...';
-  fetch('/api/yt/teach', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({emotion_idx: idx})
-  })
-  .then(r => { if (!r.ok) return r.json().then(e => { throw e; }); return r.json(); })
-  .then(d => {
-    btn.classList.add('taught');
-    setTimeout(() => btn.classList.remove('taught'), 600);
-    document.getElementById('teach-count').textContent = d.teach_count + ' corrections';
-    document.getElementById('teach-feedback').textContent =
-      'Taught: ' + d.taught_emotion + ' (loss: ' + d.loss + ') → now predicts: ' + d.new_prediction;
-  })
-  .catch(e => {
-    document.getElementById('teach-feedback').textContent =
-      'Error: ' + (e.detail || JSON.stringify(e));
-  })
-  .finally(() => { btn.disabled = false; btn.style.opacity = '1'; });
-}
-
-function teachSave() {
-  fetch('/api/yt/teach/save', {method: 'POST'})
-    .then(r => r.json())
-    .then(d => {
-      document.getElementById('teach-feedback').textContent =
-        'Checkpoint saved (' + d.teach_count + ' steps)';
-    });
-}
-
-// poll teach status every 3s
-setInterval(() => {
-  fetch('/api/yt/teach/status').then(r => r.json()).then(d => {
-    document.getElementById('teach-buffer').textContent = d.buffer_size;
-    document.getElementById('teach-count').textContent = d.teach_count + ' corrections';
-  }).catch(() => {});
-}, 3000);
+function doTeach(idx,btn){btn.disabled=true;btn.style.opacity='.5';document.getElementById('teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';fetch('/api/yt/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})}).then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();}).then(d=>{btn.classList.add('taught');setTimeout(()=>btn.classList.remove('taught'),600);document.getElementById('teach-count').textContent=d.teach_count+' corrections';document.getElementById('teach-feedback').textContent='Taught: '+d.taught_emotion+' (loss: '+d.loss+')';}).catch(e=>{document.getElementById('teach-feedback').textContent='Error: '+(e.detail||JSON.stringify(e));}).finally(()=>{btn.disabled=false;btn.style.opacity='1';});}
+function teachSave(){fetch('/api/yt/teach/save',{method:'POST'}).then(r=>r.json()).then(d=>{document.getElementById('teach-feedback').textContent='Saved ('+d.teach_count+' steps)';});}
+setInterval(()=>{fetch('/api/yt/teach/status').then(r=>r.json()).then(d=>{document.getElementById('teach-buffer').textContent=d.buffer_size;document.getElementById('teach-count').textContent=d.teach_count+' corrections';}).catch(()=>{});},3000);
 </script>
 </body>
 </html>

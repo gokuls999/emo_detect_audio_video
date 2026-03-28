@@ -51,6 +51,9 @@ documents/*.pdf
 documents/*.docx
 documents/CLAUDE.md
 
+# ── SSL certs (generated locally) ──
+*.pem
+
 # ── Misc ──
 finetune_status.json
 implementation_prompt/
