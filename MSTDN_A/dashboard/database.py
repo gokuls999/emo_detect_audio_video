@@ -78,8 +78,25 @@ def end_session(session_id: int) -> None:
 
 def list_sessions() -> list[dict]:
     with _conn() as c:
-        rows = c.execute("SELECT * FROM sessions ORDER BY id DESC").fetchall()
-        return [dict(r) for r in rows]
+        rows = c.execute("""
+            SELECT s.*, COUNT(p.id) as participants
+            FROM sessions s LEFT JOIN participants p ON p.session_id = s.id
+            GROUP BY s.id ORDER BY s.id DESC
+        """).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d['start'] = (d.get('started_at') or '')[:16].replace('T', ' ')
+            result.append(d)
+        return result
+
+def delete_session(session_id: int) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM alerts WHERE session_id=?", (session_id,))
+        c.execute("DELETE FROM readings WHERE session_id=?", (session_id,))
+        c.execute("DELETE FROM face_embeddings WHERE participant_id IN (SELECT id FROM participants WHERE session_id=?)", (session_id,))
+        c.execute("DELETE FROM participants WHERE session_id=?", (session_id,))
+        c.execute("DELETE FROM sessions WHERE id=?", (session_id,))
 
 def get_session(session_id: int) -> dict | None:
     with _conn() as c:

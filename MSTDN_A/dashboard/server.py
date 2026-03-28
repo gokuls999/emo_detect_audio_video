@@ -599,6 +599,12 @@ def session_stop():
 def sessions_list():
     return list_sessions()
 
+@app.delete("/api/sessions/{sid}")
+def session_delete(sid: int):
+    from dashboard.database import delete_session
+    delete_session(sid)
+    return {"ok": True}
+
 @app.get("/api/session/{sid}/summary")
 def session_sum(sid: int):
     return session_summary(sid)
