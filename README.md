@@ -24,7 +24,7 @@ MSTDN-A (Multimodal Spatio-Temporal Distillation Network — Audio) detects 11 e
 │  → Cross-modal Fusion → Teacher embedding Z_t                 │
 └───────────────────────────────────────────────────────────────┘
                          ↓ Knowledge Distillation
-┌─────────────────── Student (inference) ────────────────────────┐
+┌─────────────────── Student (inference) ───────────────────────┐
 │  wav2vec2 Deep Audio + Mel-Spectrogram + Prosodic Features    │
 │  → Temporal Transformer (RoPE) → Speaker GRU Memory           │
 │  → Multi-task Heads (emotion, stress, valence, arousal)       │
