@@ -138,6 +138,9 @@ class AppState:
     audio_buffer: list                       = []   # circular buffer of (wav_t, spc_t)
     BUFFER_SIZE:  int                        = 8
     teach_count:  int                        = 0
+    # Blend weights (user-adjustable via /api/blend)
+    audio_weight: float                      = 0.5
+    face_weight:  float                      = 0.5
 
 state = AppState()
 
@@ -331,15 +334,9 @@ def _inference_loop():
             _pid_fp = state.face_emotion_per_pid.get(pid_now) if pid_now else None
             fp = _pid_fp if _pid_fp is not None else state.face_emotion_probs
 
-            if rms < SILENCE_THRESH:
-                # ── silence: 100% face emotion ────────────────────────────────
-                if fp is not None:
-                    probs = fp / (fp.sum() + 1e-8)
-                else:
-                    # No face & no audio — keep last result, don't force Neutral
-                    probs = None
-            else:
-                # ── speech: 100% audio ───────────────────────────────────────
+            # ── audio inference (always run when speech detected) ──────
+            audio_p = None
+            if rms >= SILENCE_THRESH:
                 wav_t, spc_t = preprocess_audio(raw)
                 # Buffer for online learning
                 if len(state.audio_buffer) >= state.BUFFER_SIZE:
@@ -359,7 +356,19 @@ def _inference_loop():
                 stress_ema = STRESS_ALPHA * raw_stress + (1 - STRESS_ALPHA) * stress_ema
                 stress     = stress_ema
 
-                probs  = audio_p   # 100% audio — no face mixing
+            # ── blend audio + face using user-adjustable weights ──────
+            aw = state.audio_weight
+            fw = state.face_weight
+            face_p = fp / (fp.sum() + 1e-8) if fp is not None else None
+
+            if audio_p is not None and face_p is not None and aw > 0 and fw > 0:
+                probs = (aw * audio_p + fw * face_p) / (aw + fw)
+            elif audio_p is not None and aw > 0:
+                probs = audio_p
+            elif face_p is not None and fw > 0:
+                probs = face_p
+            else:
+                probs = None
 
             if probs is None:
                 time.sleep(INFER_EVERY)
@@ -699,6 +708,20 @@ def status():
         "device":         str(device),
     }
 
+class BlendIn(BaseModel):
+    audio: float = 0.5
+    face:  float = 0.5
+
+@app.post("/api/blend")
+def set_blend(body: BlendIn):
+    state.audio_weight = max(0.0, min(1.0, body.audio))
+    state.face_weight  = max(0.0, min(1.0, body.face))
+    return {"audio": state.audio_weight, "face": state.face_weight}
+
+@app.get("/api/blend")
+def get_blend():
+    return {"audio": state.audio_weight, "face": state.face_weight}
+
 @app.get("/api/audio/level")
 def audio_level():
     return {"rms": round(audio.rms(), 4)}
@@ -793,6 +816,9 @@ class YTState:
     history:           list        = []     # list of inference result dicts (capped at 1000)
     _url:              str         = ""     # current YouTube URL
     _title:            str         = ""     # current YouTube title
+    # Blend weights (user-adjustable via /api/yt/blend)
+    audio_weight:      float       = 0.5
+    face_weight:       float       = 0.5
 
 yt_state  = YTState()
 yt_state.teach_lock = threading.Lock()
@@ -1068,16 +1094,24 @@ def _yt_infer():
             yt_state.stress_ema = STRESS_ALPHA * rs + (1 - STRESS_ALPHA) * yt_state.stress_ema
             stress = yt_state.stress_ema
 
-            # Blend: 50% audio + 50% face when face available
+            # Blend audio + face using user-adjustable weights
+            aw = yt_state.audio_weight
+            fw = yt_state.face_weight
             fp = yt_state.face_probs
-            if fp is not None:
+            if fp is not None and fw > 0:
                 face_p = fp / (fp.sum() + 1e-8)
-                probs  = 0.5 * ap + 0.5 * face_p
-                probs  = probs / (probs.sum() + 1e-8)
-                mode   = "audio+face"
+                if aw > 0:
+                    probs = (aw * ap + fw * face_p) / (aw + fw)
+                    mode  = "audio+face"
+                else:
+                    probs = face_p
+                    mode  = "face_only"
+            elif aw > 0:
+                probs = ap
+                mode  = "audio"
             else:
-                probs  = ap
-                mode   = "audio"
+                probs = ap
+                mode  = "audio"
 
             idx    = int(probs.argmax())
             names = ['Ang','Dis','Fear','Hap','Neu','Sad','Sur','Con','Anx','Hlp','Dsp']
@@ -1325,6 +1359,16 @@ def yt_report():
     export_yt_pdf(data, tmp.name)
     return FileResponse(tmp.name, media_type="application/pdf",
                         filename=f"MSTDN_YT_Report.pdf")
+
+@app.post("/api/yt/blend")
+def yt_set_blend(body: BlendIn):
+    yt_state.audio_weight = max(0.0, min(1.0, body.audio))
+    yt_state.face_weight  = max(0.0, min(1.0, body.face))
+    return {"audio": yt_state.audio_weight, "face": yt_state.face_weight}
+
+@app.get("/api/yt/blend")
+def yt_get_blend():
+    return {"audio": yt_state.audio_weight, "face": yt_state.face_weight}
 
 class AutoLearnIn(BaseModel):
     enabled: bool

@@ -18,22 +18,36 @@ html,body{height:100%;overflow:hidden}
   --danger:#ef4444;--danger-bg:#fef2f2;--danger-border:#fecaca;--danger-text:#dc2626;
   --warn:#d97706;--warn-bg:#fef3c7;
   --purple:#7c3aed;--purple-bg:#ede9fe;
+  --nav-bg:#fff;--nav-border:#e2e5e9;
+  --chart-grid:#e2e5e9;--chart-text:#94a3b8;
+}
+[data-theme="dark"]{
+  --bg:#0f172a;--bg-card:#1e293b;--bg-input:#334155;--bg-hover:#475569;
+  --text:#e2e8f0;--text-sec:#94a3b8;--text-muted:#64748b;--text-inv:#cbd5e1;
+  --border:#334155;--border-light:#1e293b;
+  --accent:#818cf8;--accent-light:#a5b4fc;--accent-bg:#312e81;
+  --success:#4ade80;--success-bg:#14532d;--success-deep:#22c55e;
+  --danger:#f87171;--danger-bg:#450a0a;--danger-border:#7f1d1d;--danger-text:#fca5a5;
+  --warn:#fbbf24;--warn-bg:#78350f;
+  --purple:#a78bfa;--purple-bg:#312e81;
+  --nav-bg:#1e293b;--nav-border:#334155;
+  --chart-grid:#334155;--chart-text:#64748b;
 }
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
 
 /* top nav */
-.topnav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 20px;height:44px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:100}
+.topnav{background:var(--nav-bg);border-bottom:1px solid var(--nav-border);padding:0 20px;height:48px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:100}
 .topnav-left{display:flex;align-items:center;gap:12px}
 .topnav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
-.logo{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.logo{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.3px}
 .logo span{color:var(--accent);font-weight:800}
 .nav-divider{width:1px;height:20px;background:var(--border)}
-.nav-label{font-size:12px;color:var(--text-sec);font-weight:500}
-.status-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.3px}
+.nav-label{font-size:14px;color:var(--text-sec);font-weight:500}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.3px}
 .status-idle{background:var(--bg-hover);color:var(--text-muted)}
 .status-live{background:var(--success-bg);color:var(--success-deep)}
 .status-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
-#timer{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-muted);font-weight:500}
+#timer{font-variant-numeric:tabular-nums;font-size:13px;color:var(--text-muted);font-weight:500}
 
 /* mic wave */
 .mic-section{display:flex;align-items:center;gap:10px}
@@ -51,7 +65,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .mic-wave.off span{animation:none;height:3px;background:var(--border);opacity:.5}
 
 /* nav buttons */
-.nav-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.nav-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
 .nav-btn:hover{border-color:var(--accent);color:var(--accent)}
 .nav-btn-success{background:var(--success);color:#fff;border-color:var(--success)}
 .nav-btn-success:hover{background:var(--success-deep);border-color:var(--success-deep);color:#fff}
@@ -65,22 +79,22 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .face-toggle input[type="checkbox"]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
 
 /* layout */
-.layout{flex:1;display:grid;grid-template-columns:55% 45%;grid-template-rows:1fr 1fr;overflow:hidden;min-height:0}
+.layout{flex:1;display:grid;grid-template-columns:55% 45%;grid-template-rows:auto 1fr;overflow:hidden;min-height:0}
 .hidden{display:none!important}
 
 /* no-session screen */
 #no-session{grid-column:1/-1;grid-row:1/-1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
-.start-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:36px;max-width:440px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.start-card h2{font-size:1.3rem;font-weight:700;margin-bottom:6px;color:var(--text)}
-.start-card p{color:var(--text-muted);font-size:.85rem;margin-bottom:20px}
-.start-card .btn-primary-lg{width:100%;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
+.start-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:44px;max-width:520px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.start-card h2{font-size:1.6rem;font-weight:700;margin-bottom:8px;color:var(--text)}
+.start-card p{color:var(--text-muted);font-size:1rem;margin-bottom:24px}
+.start-card .btn-primary-lg{width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
 .start-card .btn-primary-lg:hover{opacity:.9}
 .start-card .btn-outline-lg{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);font-size:13px;font-weight:500;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
 .start-card .btn-outline-lg:hover{border-color:var(--accent);color:var(--accent)}
 
 /* top-left: video */
 .video-cell{padding:10px;display:flex;flex-direction:column;overflow:hidden}
-.video-wrap{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;flex:1;min-height:0;max-height:40vh;display:flex;align-items:center;justify-content:center}
+.video-wrap{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;flex:1;min-height:0;max-height:55vh;display:flex;align-items:center;justify-content:center}
 .video-wrap img{width:100%;height:100%;object-fit:cover;display:block}
 .video-placeholder{display:flex;align-items:center;justify-content:center;height:100%;width:100%;color:var(--text-muted);flex-direction:column;gap:6px;font-size:13px}
 .video-label{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:5px;font-size:10px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px}
@@ -102,13 +116,13 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .face-icon{width:52px;height:52px;flex-shrink:0}
 .face-icon circle,.face-icon ellipse,.face-icon path,.face-icon line{transition:all .3s}
 .detected-info{flex:1}
-.emo-label{font-size:22px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
-.emo-conf{font-size:11px;color:var(--text-muted);font-weight:500}
+.emo-label{font-size:28px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
+.emo-conf{font-size:13px;color:var(--text-muted);font-weight:500}
 
 .metrics{display:flex;gap:6px;margin-bottom:8px}
 .metric-card{flex:1;background:var(--bg-input);border-radius:6px;padding:5px 8px;text-align:center;border:1px solid var(--border-light)}
-.metric-label{font-size:9px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
-.metric-val{font-size:14px;font-weight:700}
+.metric-label{font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.metric-val{font-size:17px;font-weight:700}
 .metric-stress .metric-val{color:#ef4444}
 .metric-valence .metric-val{color:#22c55e}
 .metric-arousal .metric-val{color:#f59e0b}
@@ -116,12 +130,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .alert-banner{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger-text);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;margin-bottom:6px;display:none;text-align:center}
 
 .dist-section{margin-bottom:4px}
-.dist-title{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px}
-.dist-row{display:grid;grid-template-columns:72px 1fr 28px;align-items:center;gap:4px;margin-bottom:2px}
-.dist-label{font-size:10px;color:var(--text-inv);text-align:right;font-weight:500}
-.dist-track{height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
+.dist-title{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px}
+.dist-row{display:grid;grid-template-columns:90px 1fr 32px;align-items:center;gap:5px;margin-bottom:3px}
+.dist-label{font-size:12px;color:var(--text-inv);text-align:right;font-weight:500}
+.dist-track{height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
 .dist-fill{height:100%;border-radius:3px;transition:width .4s}
-.dist-pct{font-size:9px;color:var(--text-muted);text-align:right;font-family:monospace}
+.dist-pct{font-size:10px;color:var(--text-muted);text-align:right;font-family:monospace}
 
 /* bottom-left: participants */
 .participants-cell{padding:0 10px 10px;display:flex;flex-direction:column;overflow:hidden}
@@ -136,9 +150,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .participant-card.stress-alert{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger),0 0 10px rgba(239,68,68,.15)}
 .p-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0}
 .p-info{flex:1;min-width:0}
-.p-name{font-weight:600;font-size:12px;display:flex;align-items:center;gap:4px}
-.p-role{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.p-emotion-line{font-size:11px;margin-top:2px;display:flex;align-items:center;gap:4px}
+.p-name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:4px}
+.p-role{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-emotion-line{font-size:12px;margin-top:2px;display:flex;align-items:center;gap:4px}
 .p-stress-bar{height:3px;border-radius:2px;background:var(--bg-hover);overflow:hidden;margin-top:3px}
 .p-stress-fill{height:100%;border-radius:2px;transition:width .5s}
 .p-actions{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
@@ -156,7 +170,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 /* bottom-right: tabs */
 .tabs-cell{padding:0 10px 10px 0;display:flex;flex-direction:column;overflow:hidden}
 .tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.tab-btn{flex:1;text-align:center;padding:7px;font-size:11px;cursor:pointer;color:var(--text-muted);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.tab-btn{flex:1;text-align:center;padding:8px;font-size:13px;cursor:pointer;color:var(--text-muted);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab-btn:hover{color:var(--text)}
 .tab-content{flex:1;overflow-y:auto;min-height:0;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px}
@@ -167,7 +181,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .teach-title{font-size:10px;font-weight:600;color:var(--text-inv);letter-spacing:.3px;text-transform:uppercase}
 .teach-count{font-size:10px;color:var(--accent);font-weight:600}
 .teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-.teach-btn{padding:5px 4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:10px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
+.teach-btn{padding:7px 5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:11px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
 .teach-btn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .teach-btn:active{transform:scale(.97)}
 .teach-btn.taught{border-color:var(--success);background:var(--success-bg);color:var(--success-deep);animation:pulse .4s}
@@ -247,6 +261,20 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* theme toggle */
+.theme-toggle{background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:4px 8px;display:flex;align-items:center;color:var(--text-sec);transition:all .15s}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle svg{width:16px;height:16px}
+
+/* blend bar */
+.blend-bar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:4px 20px;display:flex;align-items:center;gap:16px;flex-shrink:0;height:36px}
+.blend-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.blend-slider{display:flex;align-items:center;gap:6px;flex:1}
+.blend-slider label{font-size:12px;color:var(--text-sec);font-weight:500;white-space:nowrap;min-width:80px}
+.blend-slider input[type="range"]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none}
+.blend-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
+.blend-slider input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
 </style>
 </head>
 <body>
@@ -282,6 +310,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
   </div>
 
   <div class="topnav-right">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+      <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      <svg id="icon-sun" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
     <label class="face-toggle" title="Auto-identify people by face">
       <input type="checkbox" id="face-auto-toggle" checked onchange="fetch('/api/face/auto/'+this.checked,{method:'POST'})"/>
       <i class="bi bi-person-bounding-box"></i>
@@ -289,11 +321,23 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
     </label>
     <div class="nav-divider"></div>
     <button class="nav-btn" onclick="if(sessionId) window.open('/api/session/'+sessionId+'/export')" title="Download PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
-    <button class="nav-btn" onclick="showHistory()"><i class="bi bi-clock-history"></i> History</button>
-    <a href="/static/yt_test.html" class="nav-link">YT Test</a>
+    <a href="/yt_test" class="nav-link">YT Test</a>
     <div class="nav-divider"></div>
     <button id="btn-start" class="nav-btn nav-btn-success" onclick="openModal('startModal')"><i class="bi bi-play-fill"></i> Start</button>
     <button id="btn-stop" class="nav-btn nav-btn-danger hidden" onclick="stopSession()"><i class="bi bi-stop-fill"></i> End</button>
+  </div>
+</div>
+
+<!-- BLEND BAR -->
+<div class="blend-bar">
+  <span class="blend-label">Detection Mix</span>
+  <div class="blend-slider">
+    <label>Audio <span id="audioVal">50</span>%</label>
+    <input type="range" id="audioSlider" min="0" max="100" value="50" oninput="updateBlend()">
+  </div>
+  <div class="blend-slider">
+    <label>Face <span id="faceVal">50</span>%</label>
+    <input type="range" id="faceSlider" min="0" max="100" value="50" oninput="updateBlend()">
   </div>
 </div>
 
@@ -311,9 +355,6 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
       <p>Start a session to begin real-time emotion and stress detection for your team.</p>
       <button class="btn-primary-lg" onclick="openModal('startModal')">
         <i class="bi bi-play-fill"></i> Start New Session
-      </button>
-      <button class="btn-outline-lg" onclick="showHistory()">
-        <i class="bi bi-clock-history"></i> View Past Sessions
       </button>
     </div>
   </div>
@@ -491,16 +532,6 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
   </div>
 </div>
 
-<!-- HISTORY MODAL -->
-<div class="modal-overlay" id="histModal">
-  <div class="modal-box wide">
-    <div class="modal-head">
-      <h3><i class="bi bi-clock-history"></i> Session History</h3>
-      <button class="modal-close" onclick="closeModal('histModal')">&times;</button>
-    </div>
-    <div class="modal-body" id="hist-modal-body">Loading...</div>
-  </div>
-</div>
 
 <script>
 // ── modal helpers ──────────────────────────────────────────────────────────────
@@ -1042,25 +1073,43 @@ function pushAlert(d){
   showToast("High stress detected -- "+pname+" ("+(d.stress*100).toFixed(0)+"%)","danger",5000);
 }
 
-// ── history ────────────────────────────────────────────────────────────────────
-async function showHistory(){
-  openModal('histModal');
-  const r=await fetch("/api/sessions");
-  const sessions=await r.json();
-  if(!sessions.length){
-    document.getElementById("hist-modal-body").innerHTML='<div style="color:var(--text-muted);font-size:12px">No sessions recorded yet.</div>';
-    return;
-  }
-  document.getElementById("hist-modal-body").innerHTML=sessions.map(s=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:6px;background:var(--bg-input);border-radius:8px;border:1px solid var(--border-light)">
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:13px">${esc(s.name)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${s.location||''} | ${new Date(s.started_at).toLocaleDateString()} ${new Date(s.started_at).toLocaleTimeString()}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${s.ended_at?'Ended: '+new Date(s.ended_at).toLocaleTimeString():'<span style="color:var(--success)">Ongoing</span>'}</div>
-      </div>
-      <a href="/api/session/${s.id}/export" class="export-btn"><i class="bi bi-file-earmark-pdf"></i> Export</a>
-    </div>`).join("");
+// ── dark mode ───────────────────────────────────────────────────────────────────
+function toggleTheme(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const t=isDark?'light':'dark';
+  if(t==='dark') document.documentElement.setAttribute('data-theme','dark');
+  else document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('mstdn-dash-theme',t);
+  updateThemeIcon(t);
 }
+function updateThemeIcon(t){
+  document.getElementById('icon-moon').style.display=t==='dark'?'none':'block';
+  document.getElementById('icon-sun').style.display=t==='dark'?'block':'none';
+}
+(function(){
+  const t=localStorage.getItem('mstdn-dash-theme')||'light';
+  if(t==='dark') document.documentElement.setAttribute('data-theme','dark');
+  updateThemeIcon(t);
+})();
+
+// ── blend control ───────────────────────────────────────────────────────────────
+async function updateBlend(){
+  const a=document.getElementById('audioSlider').value;
+  const f=document.getElementById('faceSlider').value;
+  document.getElementById('audioVal').textContent=a;
+  document.getElementById('faceVal').textContent=f;
+  await fetch('/api/blend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:a/100,face:f/100})});
+}
+(async function(){
+  try{
+    const r=await fetch('/api/blend');
+    const d=await r.json();
+    document.getElementById('audioSlider').value=Math.round(d.audio*100);
+    document.getElementById('faceSlider').value=Math.round(d.face*100);
+    document.getElementById('audioVal').textContent=Math.round(d.audio*100);
+    document.getElementById('faceVal').textContent=Math.round(d.face*100);
+  }catch(e){}
+})();
 
 // ── tab switcher ───────────────────────────────────────────────────────────────
 function switchTab(el,targetId){

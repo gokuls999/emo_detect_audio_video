@@ -153,6 +153,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .teach-buffer{font-size:10px;color:var(--text-muted)}
 .btn-save{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-inv);cursor:pointer;font-size:10px;font-weight:600}
 .btn-save:hover{border-color:var(--accent);color:var(--accent)}
+
+/* blend bar */
+.blend-bar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:4px 16px;display:flex;align-items:center;gap:14px;flex-shrink:0;height:34px}
+.blend-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.blend-slider{display:flex;align-items:center;gap:6px;flex:1}
+.blend-slider label{font-size:11px;color:var(--text-sec);font-weight:500;white-space:nowrap;min-width:72px}
+.blend-slider input[type="range"]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none}
+.blend-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
+.blend-slider input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
 </style>
 </head>
 <body>
@@ -177,6 +186,19 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
       <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
     </button>
     <a href="/" class="back-link">Dashboard</a>
+  </div>
+</div>
+
+<!-- BLEND BAR -->
+<div class="blend-bar">
+  <span class="blend-label">Detection Mix</span>
+  <div class="blend-slider">
+    <label>Audio <span id="audioVal">50</span>%</label>
+    <input type="range" id="audioSlider" min="0" max="100" value="50" oninput="updateBlend()">
+  </div>
+  <div class="blend-slider">
+    <label>Face <span id="faceVal">50</span>%</label>
+    <input type="range" id="faceSlider" min="0" max="100" value="50" oninput="updateBlend()">
   </div>
 </div>
 
@@ -405,6 +427,25 @@ EMOTIONS.forEach((emo,idx)=>{const btn=document.createElement('button');btn.clas
 function doTeach(idx,btn){btn.disabled=true;btn.style.opacity='.5';document.getElementById('teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';fetch('/api/yt/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})}).then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();}).then(d=>{btn.classList.add('taught');setTimeout(()=>btn.classList.remove('taught'),600);document.getElementById('teach-count').textContent=d.teach_count+' corrections';document.getElementById('teach-feedback').textContent='Taught: '+d.taught_emotion+' (loss: '+d.loss+')';}).catch(e=>{document.getElementById('teach-feedback').textContent='Error: '+(e.detail||JSON.stringify(e));}).finally(()=>{btn.disabled=false;btn.style.opacity='1';});}
 function teachSave(){fetch('/api/yt/teach/save',{method:'POST'}).then(r=>r.json()).then(d=>{document.getElementById('teach-feedback').textContent='Saved ('+d.teach_count+' steps)';});}
 setInterval(()=>{fetch('/api/yt/teach/status').then(r=>r.json()).then(d=>{document.getElementById('teach-buffer').textContent=d.buffer_size;document.getElementById('teach-count').textContent=d.teach_count+' corrections';}).catch(()=>{});},3000);
+
+// ── blend control ───────────────────────────────────────────────────────────
+async function updateBlend(){
+  const a=document.getElementById('audioSlider').value;
+  const f=document.getElementById('faceSlider').value;
+  document.getElementById('audioVal').textContent=a;
+  document.getElementById('faceVal').textContent=f;
+  await fetch('/api/yt/blend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:a/100,face:f/100})});
+}
+(async function(){
+  try{
+    const r=await fetch('/api/yt/blend');
+    const d=await r.json();
+    document.getElementById('audioSlider').value=Math.round(d.audio*100);
+    document.getElementById('faceSlider').value=Math.round(d.face*100);
+    document.getElementById('audioVal').textContent=Math.round(d.audio*100);
+    document.getElementById('faceVal').textContent=Math.round(d.face*100);
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
