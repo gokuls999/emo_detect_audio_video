@@ -101,15 +101,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .right-col{display:flex;flex-direction:column;padding:14px 14px 14px 0;overflow:hidden;min-height:0}
 .analysis-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .analysis-accent{height:4px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:background .3s;flex-shrink:0}
-.analysis-body{padding:16px 20px;flex:1;overflow-y:auto;min-height:0}
+.analysis-body{padding:10px 14px;flex:1;overflow-y:auto;min-height:0}
 
 /* detected emotion */
-.detected-row{display:flex;align-items:center;gap:14px;margin-bottom:12px}
-.face-icon{width:60px;height:60px;flex-shrink:0}
+.detected-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.face-icon{width:44px;height:44px;flex-shrink:0}
 .face-icon circle,.face-icon ellipse,.face-icon path,.face-icon line{transition:all .3s}
 .detected-info{flex:1}
-.emo-label{font-size:32px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
-.emo-conf{font-size:14px;color:var(--text-muted);font-weight:500}
+.emo-label{font-size:24px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
+.emo-conf{font-size:12px;color:var(--text-muted);font-weight:500}
 .source-badge{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
 .source-badge.src-audio{background:#dbeafe;color:#2563eb}
 .source-badge.src-face{background:#dcfce7;color:#16a34a}
@@ -123,10 +123,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* metrics */
-.metrics{display:flex;gap:8px;margin-bottom:12px}
-.metric-card{flex:1;background:var(--bg-input);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid var(--border-light)}
-.metric-label{font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
-.metric-val{font-size:20px;font-weight:700}
+.metrics{display:flex;gap:6px;margin-bottom:8px}
+.metric-card{flex:1;background:var(--bg-input);border-radius:8px;padding:5px 8px;text-align:center;border:1px solid var(--border-light)}
+.metric-label{font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.metric-val{font-size:16px;font-weight:700}
 .metric-stress .metric-val{color:#ef4444}
 .metric-valence .metric-val{color:#22c55e}
 .metric-arousal .metric-val{color:#f59e0b}
@@ -135,32 +135,33 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .alert-banner{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger-text);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600;margin-bottom:10px;display:none;text-align:center}
 
 /* distribution bars */
-.dist-section{margin-bottom:10px}
-.dist-title{font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px}
-.dist-row{display:grid;grid-template-columns:100px 1fr 36px;align-items:center;gap:6px;margin-bottom:4px}
-.dist-label{font-size:13px;color:var(--text-inv);text-align:right;font-weight:500}
-.dist-track{height:8px;background:var(--bg-hover);border-radius:4px;overflow:hidden}
-.dist-fill{height:100%;border-radius:4px;transition:width .4s}
-.dist-pct{font-size:12px;color:var(--text-muted);text-align:right;font-family:monospace}
+.dist-section{margin-bottom:6px}
+.dist-title{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px}
+#bars{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px}
+.dist-row{display:grid;grid-template-columns:62px 1fr 26px;align-items:center;gap:4px;margin-bottom:2px}
+.dist-label{font-size:10px;color:var(--text-inv);text-align:right;font-weight:500}
+.dist-track{height:4px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
+.dist-fill{height:100%;border-radius:3px;transition:width .4s}
+.dist-pct{font-size:9px;color:var(--text-muted);text-align:right;font-family:monospace}
 
 /* teach panel */
-.teach-section{border-top:1px solid var(--border-light);padding-top:10px}
-.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.teach-title{font-size:13px;font-weight:600;color:var(--text-inv);letter-spacing:.3px}
-.teach-count{font-size:12px;color:var(--accent);font-weight:600}
+.teach-section{border-top:1px solid var(--border-light);padding-top:6px}
+.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.teach-title{font-size:12px;font-weight:600;color:var(--text-inv);letter-spacing:.3px}
+.teach-count{font-size:11px;color:var(--accent);font-weight:600}
 
 /* auto-learn badge dot */
 .auto-badge-dot{width:7px;height:7px;border-radius:50%;background:#16a34a;animation:blink 1s infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.teach-btn{padding:8px 6px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:13px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
+.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.teach-btn{padding:5px 4px 6px;border-radius:7px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:11px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
 .teach-btn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .teach-btn:active{transform:scale(.97)}
 .teach-btn.taught{border-color:var(--success);background:var(--success-bg);color:var(--success-deep);animation:pulse .4s}
-.teach-face{width:22px;height:22px;display:block;margin:0 auto 3px}
+.teach-face{width:16px;height:16px;display:block;margin:0 auto 2px}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}100%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-.teach-feedback{font-size:12px;color:var(--text-muted);margin-top:6px;min-height:16px;text-align:center}
-.teach-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.teach-feedback{font-size:11px;color:var(--text-muted);margin-top:4px;min-height:14px;text-align:center}
+.teach-footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
 .teach-buffer{font-size:12px;color:var(--text-muted)}
 .btn-save{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-inv);cursor:pointer;font-size:12px;font-weight:600}
 .btn-save:hover{border-color:var(--accent);color:var(--accent)}
@@ -292,7 +293,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
             </div>
           </div>
           <!-- auto-learn live status strip -->
-          <div id="auto-strip" style="display:flex;align-items:center;justify-content:space-between;background:var(--auto-bg);border:1px solid var(--auto-border);border-radius:8px;padding:7px 12px;margin-bottom:8px;font-size:13px;color:var(--auto-text)">
+          <div id="auto-strip" style="display:flex;align-items:center;justify-content:space-between;background:var(--auto-bg);border:1px solid var(--auto-border);border-radius:8px;padding:5px 10px;margin-bottom:6px;font-size:12px;color:var(--auto-text)">
             <div style="display:flex;align-items:center;gap:6px">
               <span class="auto-badge-dot" style="display:inline-block"></span>
               <span style="font-weight:700">Auto Learn</span>
@@ -337,7 +338,7 @@ const BAR_COLORS=["#ef4444","#a855f7","#f97316","#22c55e","#94a3b8","#3b82f6","#
 const ACCENT_MAP={Anger:"#ef4444",Happiness:"#22c55e",Sadness:"#3b82f6",Fear:"#f97316",Surprise:"#eab308",Disgust:"#a855f7",Neutral:"#6366f1"};
 
 // SVG face silhouettes
-function faceSVG(emotion,size=60){
+function faceSVG(emotion,size=44){
   const s=size,c=s/2,r=s*.38,sc=s/72;
   const col=ACCENT_MAP[emotion]||'#6366f1';
   const el=c-10*sc,er=c+10*sc,ey=c-6*sc;
@@ -360,7 +361,7 @@ function faceSVG(emotion,size=60){
   }
   return`<svg class="face-icon" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">${head}${eyes}${brows}${mouth}</svg>`;
 }
-function faceSmall(e){return faceSVG(e,26).replace('class="face-icon"','class="teach-face"');}
+function faceSmall(e){return faceSVG(e,20).replace('class="face-icon"','class="teach-face"');}
 
 let muted=false,ws=null;
 
