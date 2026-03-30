@@ -26,9 +26,9 @@ def _ensure_model():
             from insightface.app import FaceAnalysis
             _face_app = FaceAnalysis(
                 name="buffalo_l",
-                providers=["CPUExecutionProvider"],
+                providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
             )
-            _face_app.prepare(ctx_id=-1, det_size=(640, 640))
+            _face_app.prepare(ctx_id=0, det_size=(640, 640))
             _model_ready = True
             print("[face_id] InsightFace ArcFace model ready.")
         except Exception as e:
