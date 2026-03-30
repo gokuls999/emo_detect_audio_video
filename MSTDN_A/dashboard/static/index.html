@@ -142,11 +142,18 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 
 .dist-section{margin-bottom:4px}
 .dist-title{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px}
-.dist-row{display:grid;grid-template-columns:80px 1fr 30px;align-items:center;gap:4px;margin-bottom:2px}
-.dist-label{font-size:11px;color:var(--text-inv);text-align:right;font-weight:500}
-.dist-track{height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
-.dist-fill{height:100%;border-radius:3px;transition:width .4s}
-.dist-pct{font-size:10px;color:var(--text-muted);text-align:right;font-family:monospace}
+#prob-bars{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px}
+.dist-row{display:grid;grid-template-columns:62px 1fr 26px;align-items:center;gap:3px;margin-bottom:1px}
+.dist-label{font-size:10px;color:var(--text-inv);text-align:right;font-weight:500}
+.dist-track{height:4px;background:var(--bg-hover);border-radius:2px;overflow:hidden}
+.dist-fill{height:100%;border-radius:2px;transition:width .4s}
+.dist-pct{font-size:9px;color:var(--text-muted);text-align:right;font-family:monospace}
+
+/* inline teach (inside emotion card) */
+.teach-inline{border-top:1px solid var(--border);padding-top:6px;margin-top:4px}
+.teach-inline .teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.teach-inline .teach-title{font-size:11px;font-weight:600;color:var(--text-inv);letter-spacing:.3px;text-transform:uppercase}
+.teach-inline .teach-count{font-size:11px;color:var(--accent);font-weight:600}
 
 /* bottom-left: participants */
 .participants-cell{padding:0 12px 12px;display:flex;flex-direction:column;overflow:hidden}
@@ -432,6 +439,24 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
           <div class="dist-title">Distribution</div>
           <div id="prob-bars"></div>
         </div>
+        <!-- Teach inline — always visible, no scroll needed -->
+        <div class="teach-inline">
+          <div class="teach-hdr">
+            <div class="teach-title"><i class="bi bi-lightbulb"></i> Teach Model</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="teach-count" id="dash-teach-count">0 corrections</div>
+              <button class="btn-clear" onclick="clearTeach()" title="Reset">Clear</button>
+            </div>
+          </div>
+          <div class="teach-grid" id="dash-teach-grid"></div>
+          <div class="teach-feedback" id="dash-teach-feedback">Click an emotion to correct the model</div>
+          <div class="auto-learn-strip">
+            <label><input type="checkbox" id="dash-auto-learn" onchange="toggleDashAutoLearn(this.checked)"> Auto-Learn</label>
+            <span class="al-status" id="dash-auto-status">Off</span>
+            <span class="teach-buffer">Buffer: <span id="dash-teach-buffer">0</span></span>
+            <button class="btn-save" onclick="dashTeachSave()">Save</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -453,38 +478,16 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
     </div>
   </div>
 
-  <!-- BOTTOM-RIGHT: Tabs -->
+  <!-- BOTTOM-RIGHT: Tabs (Analytics / Alerts / Sessions) -->
   <div class="tabs-cell hidden" id="tabs-cell">
     <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab(this,'tab-teach')"><i class="bi bi-lightbulb"></i> Teach</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-analytics')"><i class="bi bi-bar-chart"></i> Analytics</button>
+      <button class="tab-btn active" onclick="switchTab(this,'tab-analytics')"><i class="bi bi-bar-chart"></i> Analytics</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-alerts')"><i class="bi bi-bell"></i> Alerts</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-sessions')"><i class="bi bi-clock-history"></i> Sessions</button>
     </div>
 
-    <!-- Teach tab -->
-    <div class="tab-content" id="tab-teach">
-      <div class="teach-section">
-        <div class="teach-hdr">
-          <div class="teach-title">Teach Model</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="teach-count" id="dash-teach-count">0 corrections</div>
-            <button class="btn-clear" onclick="clearTeach()" title="Reset corrections">Clear</button>
-          </div>
-        </div>
-        <div class="teach-grid" id="dash-teach-grid"></div>
-        <div class="teach-feedback" id="dash-teach-feedback">Click an emotion to correct the model</div>
-        <div class="auto-learn-strip">
-          <label><input type="checkbox" id="dash-auto-learn" onchange="toggleDashAutoLearn(this.checked)"> Auto-Learn</label>
-          <span class="al-status" id="dash-auto-status">Off</span>
-          <span class="teach-buffer">Buffer: <span id="dash-teach-buffer">0</span></span>
-          <button class="btn-save" onclick="dashTeachSave()">Save</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Analytics tab -->
-    <div class="tab-content hidden" id="tab-analytics">
+    <div class="tab-content" id="tab-analytics">
       <div class="section-hdr">
         <div class="chart-label" style="margin:0">Analytics</div>
         <button class="btn-clear" onclick="clearAnalytics()" title="Reset analytics data">Clear</button>
@@ -1181,8 +1184,9 @@ async function updateBlend(){
 function switchTab(el,targetId){
   document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  ['tab-teach','tab-analytics','tab-alerts','tab-sessions'].forEach(id=>{
-    document.getElementById(id).classList.toggle('hidden',id!==targetId);
+  ['tab-analytics','tab-alerts','tab-sessions'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('hidden',id!==targetId);
   });
   if(targetId==='tab-sessions') loadSessions();
 }
