@@ -398,7 +398,7 @@ function connectWS(){
   ws.onmessage=e=>{
     const d=JSON.parse(e.data);
     if(d.type==='emotion_update'||d.type==='init'){const src=d.type==='init'?d.latest:d;if(src)updateUI(src);}
-    if(d.type==='teach_ack')document.getElementById('teach-count').textContent=d.teach_count+' corrections';
+    if(d.type==='teach_ack'){document.getElementById('teach-count').textContent=d.teach_count+' corrections';document.getElementById('teach-feedback').textContent='Taught: '+d.taught_emotion+' (loss: '+d.loss+')\u2713';}
     if(d.type==='auto_teach_ack'){
       document.getElementById('teach-count').textContent=d.teach_count+' corrections';
       document.getElementById('auto-last').textContent='Last: '+d.taught_emotion+' (loss '+d.loss+')';
@@ -455,7 +455,13 @@ document.getElementById('face-container').innerHTML=faceSVG('Neutral');
 const teachGrid=document.getElementById('teach-grid');
 EMOTIONS.forEach((emo,idx)=>{const btn=document.createElement('button');btn.className='teach-btn';btn.innerHTML=faceSmall(emo)+emo;btn.onclick=()=>doTeach(idx,btn);teachGrid.appendChild(btn);});
 
-function doTeach(idx,btn){btn.disabled=true;btn.style.opacity='.5';document.getElementById('teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';fetch('/api/yt/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})}).then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();}).then(d=>{btn.classList.add('taught');setTimeout(()=>btn.classList.remove('taught'),600);document.getElementById('teach-count').textContent=d.teach_count+' corrections';document.getElementById('teach-feedback').textContent='Taught: '+d.taught_emotion+' (loss: '+d.loss+')';}).catch(e=>{document.getElementById('teach-feedback').textContent='Error: '+(e.detail||JSON.stringify(e));}).finally(()=>{btn.disabled=false;btn.style.opacity='1';});}
+function doTeach(idx,btn){
+  btn.classList.add('taught');
+  document.getElementById('teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';
+  setTimeout(()=>btn.classList.remove('taught'),400);
+  fetch('/api/yt/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})}).catch(()=>{});
+  // result arrives via WS teach_ack
+}
 function teachSave(){fetch('/api/yt/teach/save',{method:'POST'}).then(r=>r.json()).then(d=>{document.getElementById('teach-feedback').textContent='Saved ('+d.teach_count+' steps)';});}
 setInterval(()=>{fetch('/api/yt/teach/status').then(r=>r.json()).then(d=>{document.getElementById('teach-buffer').textContent=d.buffer_size;document.getElementById('teach-count').textContent=d.teach_count+' corrections';}).catch(()=>{});},3000);
 

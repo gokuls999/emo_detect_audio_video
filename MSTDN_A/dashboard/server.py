@@ -751,10 +751,12 @@ class DashTeachIn(BaseModel):
 def dash_teach(body: DashTeachIn):
     if body.emotion_idx < 0 or body.emotion_idx > 10:
         raise HTTPException(400, "emotion_idx must be 0-10")
-    result = do_teach_step(body.emotion_idx, source="dash")
-    if not result["success"]:
-        raise HTTPException(400, result["error"])
-    return result
+    def _run(idx):
+        result = do_teach_step(idx, source="dash")
+        if result.get("success"):
+            broadcast_from_thread({"type": "teach_ack", **result})
+    threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
+    return {"queued": True}
 
 @app.post("/api/teach/save")
 def dash_teach_save():
@@ -945,19 +947,13 @@ def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
                 torch.save(_model.state_dict(), ONLINE_CKPT)
                 print(f"[online] Checkpoint saved ({yt_state.teach_count} steps)")
 
-            with torch.no_grad():
-                out2 = _model(wav_t, spc_t)
-                new_pred = int(out2["primary_logits"].argmax(dim=-1).item())
-
             print(f"[online] teach #{yt_state.teach_count}: "
-                  f"label={EMOTIONS[emotion_idx]} loss={loss_val:.4f} "
-                  f"now_pred={EMOTIONS[new_pred]}")
+                  f"label={EMOTIONS[emotion_idx]} loss={loss_val:.4f}")
 
             return {
                 "success": True,
                 "loss": round(loss_val, 4),
                 "teach_count": yt_state.teach_count,
-                "new_prediction": EMOTIONS[new_pred],
                 "taught_emotion": EMOTIONS[emotion_idx],
             }
         finally:
@@ -1286,13 +1282,13 @@ class YTTeachIn(BaseModel):
 def yt_teach(body: YTTeachIn):
     if body.emotion_idx < 0 or body.emotion_idx > 10:
         raise HTTPException(400, "emotion_idx must be 0-10")
-    result = do_teach_step(body.emotion_idx)
-    if not result["success"]:
-        raise HTTPException(400, result["error"])
-    # Manual correction overrides auto-learn — pause auto for a full cooldown cycle
-    yt_state.last_auto_teach = time.time()
-    _yt_bcast_sync({"type": "teach_ack", **result})
-    return result
+    yt_state.last_auto_teach = time.time()  # pause auto-learn immediately
+    def _run(idx):
+        result = do_teach_step(idx)
+        if result.get("success"):
+            _yt_bcast_sync({"type": "teach_ack", **result})
+    threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
+    return {"queued": True}
 
 @app.post("/api/yt/teach/save")
 def yt_teach_save():

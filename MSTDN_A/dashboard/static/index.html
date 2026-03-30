@@ -681,6 +681,11 @@ function handleMsg(d){
     renderParticipants();
     showToast("Face registered for "+d.name,"success");
   }
+  else if(d.type==="teach_ack"){
+    document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
+    document.getElementById('dash-teach-feedback').textContent=
+      'Taught: '+d.taught_emotion+' (loss: '+d.loss+')\u2713';
+  }
   else if(d.type==="auto_teach_ack"){
     document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
     document.getElementById('dash-teach-feedback').textContent=
@@ -1312,24 +1317,11 @@ EMOTIONS.forEach((emo,idx)=>{
 });
 
 function dashTeach(idx,btn){
-  btn.disabled=true;btn.style.opacity='0.5';
+  btn.classList.add('taught');
   document.getElementById('dash-teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';
-  fetch('/api/teach',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({emotion_idx:idx})
-  })
-  .then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();})
-  .then(d=>{
-    btn.classList.add('taught');
-    setTimeout(()=>btn.classList.remove('taught'),600);
-    document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
-    document.getElementById('dash-teach-feedback').textContent=
-      'Taught: '+d.taught_emotion+' (loss: '+d.loss+') -> now: '+d.new_prediction;
-  })
-  .catch(e=>{
-    document.getElementById('dash-teach-feedback').textContent='Error: '+(e.detail||JSON.stringify(e));
-  })
-  .finally(()=>{btn.disabled=false;btn.style.opacity='1';});
+  setTimeout(()=>btn.classList.remove('taught'),400);
+  fetch('/api/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})}).catch(()=>{});
+  // result arrives via WS teach_ack
 }
 
 function dashTeachSave(){
