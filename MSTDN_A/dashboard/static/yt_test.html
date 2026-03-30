@@ -482,7 +482,6 @@ function toggleMute(){muted=!muted;const b=document.getElementById('mute-btn');b
 
 connectWS();drawWave();
 document.getElementById('face-container').innerHTML=faceSVG('Neutral');
-setYTViewMode(ytViewMode);
 
 // teach buttons
 const teachGrid=document.getElementById('teach-grid');
@@ -508,7 +507,7 @@ function setYTViewMode(mode){
   localStorage.setItem('mstdn-yt-view-mode', mode);
   document.getElementById('yt-btn-single').classList.toggle('active', mode==='single');
   document.getElementById('yt-btn-multi').classList.toggle('active', mode==='multi');
-  document.getElementById('teach-grid').style.display = mode==='single' ? '' : 'none';
+  // Single-teach grid always visible — multi mode adds the multi-section on top
   document.getElementById('yt-multi-teach').classList.toggle('visible', mode==='multi');
   ytClearMultiSel();
   if(mode==='single') document.getElementById('yt-secondary-row').innerHTML='';
@@ -596,6 +595,8 @@ async function updateBlend(){
     document.getElementById('faceVal').textContent=Math.round(d.face*100);
   }catch(e){}
 })();
+// Init view mode AFTER all declarations and build loops
+setYTViewMode(ytViewMode);
 </script>
 </body>
 </html>
