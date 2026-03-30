@@ -751,10 +751,16 @@ class DashTeachIn(BaseModel):
 def dash_teach(body: DashTeachIn):
     if body.emotion_idx < 0 or body.emotion_idx > 10:
         raise HTTPException(400, "emotion_idx must be 0-10")
+    if yt_state.teach_busy:
+        return {"queued": False, "busy": True}
+    yt_state.teach_busy = True
     def _run(idx):
-        result = do_teach_step(idx, source="dash")
-        if result.get("success"):
-            broadcast_from_thread({"type": "teach_ack", **result})
+        try:
+            result = do_teach_step(idx, source="dash")
+            if result.get("success"):
+                broadcast_from_thread({"type": "teach_ack", **result})
+        finally:
+            yt_state.teach_busy = False
     threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
     return {"queued": True}
 
@@ -822,6 +828,7 @@ class YTState:
     BUFFER_SIZE:  int              = 8      # keep last 8 chunks (~16s audio)
     teach_count:  int              = 0      # total teach steps this session
     teach_lock:   "threading.Lock" = None   # prevent concurrent training
+    teach_busy:   bool             = False  # drop extra clicks while training
     # Auto-learn
     auto_learn:        bool        = False  # auto teach from own predictions
     last_auto_teach:   float       = 0.0   # throttle timer
@@ -1283,10 +1290,16 @@ def yt_teach(body: YTTeachIn):
     if body.emotion_idx < 0 or body.emotion_idx > 10:
         raise HTTPException(400, "emotion_idx must be 0-10")
     yt_state.last_auto_teach = time.time()  # pause auto-learn immediately
+    if yt_state.teach_busy:
+        return {"queued": False, "busy": True}
+    yt_state.teach_busy = True
     def _run(idx):
-        result = do_teach_step(idx)
-        if result.get("success"):
-            _yt_bcast_sync({"type": "teach_ack", **result})
+        try:
+            result = do_teach_step(idx)
+            if result.get("success"):
+                _yt_bcast_sync({"type": "teach_ack", **result})
+        finally:
+            yt_state.teach_busy = False
     threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
     return {"queued": True}
 

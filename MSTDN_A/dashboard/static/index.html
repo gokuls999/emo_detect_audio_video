@@ -682,6 +682,7 @@ function handleMsg(d){
     showToast("Face registered for "+d.name,"success");
   }
   else if(d.type==="teach_ack"){
+    _dashTeachBusy=false;
     document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
     document.getElementById('dash-teach-feedback').textContent=
       'Taught: '+d.taught_emotion+' (loss: '+d.loss+')\u2713';
@@ -1316,12 +1317,16 @@ EMOTIONS.forEach((emo,idx)=>{
   dtGrid.appendChild(btn);
 });
 
+let _dashTeachBusy=false;
 function dashTeach(idx,btn){
+  if(_dashTeachBusy)return;
+  _dashTeachBusy=true;
   btn.classList.add('taught');
   document.getElementById('dash-teach-feedback').textContent='Teaching: '+EMOTIONS[idx]+'...';
   setTimeout(()=>btn.classList.remove('taught'),400);
-  fetch('/api/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})}).catch(()=>{});
-  // result arrives via WS teach_ack
+  fetch('/api/teach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_idx:idx})})
+    .then(r=>r.json()).then(d=>{if(d.busy)_dashTeachBusy=false;}).catch(()=>{_dashTeachBusy=false;});
+  // _dashTeachBusy=false set when WS teach_ack arrives
 }
 
 function dashTeachSave(){
