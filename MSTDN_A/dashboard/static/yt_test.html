@@ -178,6 +178,23 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .blend-slider input[type="range"]{flex:1;height:6px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none}
 .blend-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
 .blend-slider input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
+/* view mode toggle */
+.view-toggle{display:flex;align-items:center;gap:4px;margin-bottom:3px}
+.view-toggle-btn{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:10px;font-weight:600;cursor:pointer;transition:all .12s}
+.view-toggle-btn.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+/* secondary emotion chips */
+.secondary-row{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px;min-height:14px}
+.multi-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:var(--bg-hover);color:var(--text-sec);border:1px solid var(--border)}
+.multi-chip .chip-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+/* multi-teach */
+.teach-btn.selected{border-color:var(--accent)!important;background:var(--accent-bg)!important;color:var(--accent)!important}
+.multi-teach-section{display:none;margin-top:4px}
+.multi-teach-section.visible{display:block}
+.multi-teach-hdr{font-size:10px;color:var(--text-muted);margin-bottom:3px}
+.multi-submit-row{display:flex;align-items:center;gap:6px;margin-top:4px}
+.btn-multi-submit{padding:4px 12px;border-radius:6px;background:var(--accent);color:white;border:none;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .12s}
+.btn-multi-submit:hover{opacity:.85}
+.btn-clear-sel{background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline;padding:0}
 </style>
 </head>
 <body>
@@ -262,7 +279,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
         <div class="detected-row">
           <div id="face-container"></div>
           <div class="detected-info">
+            <div class="view-toggle">
+              <button class="view-toggle-btn active" id="yt-btn-single" onclick="setYTViewMode('single')">☰ Single</button>
+              <button class="view-toggle-btn" id="yt-btn-multi" onclick="setYTViewMode('multi')">◈ Multi</button>
+            </div>
             <div class="emo-label" id="emo-name">Waiting...</div>
+            <div class="secondary-row" id="yt-secondary-row"></div>
             <div class="emo-conf" id="emo-conf">No data yet</div>
             <div class="source-badge src-none" id="source-badge"><span class="source-dot"></span> Waiting</div>
           </div>
@@ -303,6 +325,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
           </div>
           <!-- manual teach grid — always visible -->
           <div class="teach-grid" id="teach-grid"></div>
+          <div class="multi-teach-section" id="yt-multi-teach">
+            <div class="multi-teach-hdr">Select emotions you observe, then Submit</div>
+            <div class="teach-grid" id="yt-multi-grid"></div>
+            <div class="multi-submit-row">
+              <button class="btn-multi-submit" onclick="ytSubmitMulti()">Submit Correction</button>
+              <button class="btn-clear-sel" onclick="ytClearMultiSel()">Clear Selection</button>
+            </div>
+          </div>
           <div class="teach-feedback" id="teach-feedback">Manual correction overrides auto-learn for 12s</div>
           <div class="teach-footer">
             <span class="teach-buffer">Buffer: <span id="teach-buffer">0</span></span>
@@ -430,6 +460,8 @@ function updateUI(d){
   document.getElementById('emo-name').style.color=ac;
   document.getElementById('alert-banner').style.display=d.alert?'block':'none';
   if(d.probs){const sorted=d.probs.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p);document.getElementById('bars').innerHTML=sorted.map(({p,i})=>`<div class="dist-row"><div class="dist-label">${EMOTIONS[i]}</div><div class="dist-track"><div class="dist-fill" style="width:${(p*100).toFixed(1)}%;background:${BAR_COLORS[i]}"></div></div><div class="dist-pct">${(p*100).toFixed(0)}%</div></div>`).join('');}
+  if(ytViewMode==='multi') renderYTSecondaryChips(d.secondary||[]);
+  else document.getElementById('yt-secondary-row').innerHTML='';
   if(d.audio_rms!=null)pushWaveRMS(d.audio_rms);
   if(d.mode==='audio+face'){setMode('audioface');setSourceTag('audioface');}else if(d.mode==='audio'){setMode('audio');setSourceTag('audio');}else if(d.mode==='face_only'){setMode('face');setSourceTag('face');}
 }
@@ -450,6 +482,7 @@ function toggleMute(){muted=!muted;const b=document.getElementById('mute-btn');b
 
 connectWS();drawWave();
 document.getElementById('face-container').innerHTML=faceSVG('Neutral');
+setYTViewMode(ytViewMode);
 
 // teach buttons
 const teachGrid=document.getElementById('teach-grid');
@@ -465,6 +498,65 @@ function doTeach(idx,btn){
               else if(d.error)document.getElementById('teach-feedback').textContent='Error: '+d.error;})
     .catch(()=>{});
 }
+
+// ── view mode (single / multi) ───────────────────────────────────────────────
+let ytViewMode = localStorage.getItem('mstdn-yt-view-mode') || 'single';
+let ytMultiSel = new Set();
+
+function setYTViewMode(mode){
+  ytViewMode = mode;
+  localStorage.setItem('mstdn-yt-view-mode', mode);
+  document.getElementById('yt-btn-single').classList.toggle('active', mode==='single');
+  document.getElementById('yt-btn-multi').classList.toggle('active', mode==='multi');
+  document.getElementById('teach-grid').style.display = mode==='single' ? '' : 'none';
+  document.getElementById('yt-multi-teach').classList.toggle('visible', mode==='multi');
+  ytClearMultiSel();
+  if(mode==='single') document.getElementById('yt-secondary-row').innerHTML='';
+}
+
+function ytClearMultiSel(){
+  ytMultiSel.clear();
+  document.querySelectorAll('#yt-multi-grid .teach-btn').forEach(b=>b.classList.remove('selected'));
+}
+
+function ytSubmitMulti(){
+  if(!ytMultiSel.size){
+    document.getElementById('teach-feedback').textContent='Select at least one emotion first';
+    return;
+  }
+  const indices=[...ytMultiSel];
+  document.getElementById('teach-feedback').textContent='Teaching: '+indices.map(i=>EMOTIONS[i]).join(' + ')+'...';
+  fetch('/api/yt/teach/multi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion_indices:indices})})
+    .then(r=>r.json())
+    .then(d=>{if(d.error) document.getElementById('teach-feedback').textContent='Error: '+d.error;})
+    .catch(()=>{});
+  ytClearMultiSel();
+}
+
+function renderYTSecondaryChips(secondary){
+  const row=document.getElementById('yt-secondary-row');
+  if(!row) return;
+  if(!secondary||!secondary.length){row.innerHTML='';return;}
+  row.innerHTML=secondary.map(name=>{
+    const i=EMOTIONS.indexOf(name);
+    const c=i>=0?BAR_COLORS[i]:'#888';
+    return `<span class="multi-chip"><span class="chip-dot" style="background:${c}"></span>${name}</span>`;
+  }).join('');
+}
+
+// Build multi-teach grid
+const ytMGrid=document.getElementById('yt-multi-grid');
+EMOTIONS.forEach((emo,idx)=>{
+  const btn=document.createElement('button');
+  btn.className='teach-btn';
+  btn.id='ym-btn-'+idx;
+  btn.innerHTML=faceSmall(emo)+emo;
+  btn.onclick=()=>{
+    if(ytMultiSel.has(idx)){ytMultiSel.delete(idx);btn.classList.remove('selected');}
+    else{ytMultiSel.add(idx);btn.classList.add('selected');}
+  };
+  ytMGrid.appendChild(btn);
+});
 function teachSave(){fetch('/api/yt/teach/save',{method:'POST'}).then(r=>r.json()).then(d=>{document.getElementById('teach-feedback').textContent='Saved ('+d.teach_count+' steps)';});}
 setInterval(()=>{fetch('/api/yt/teach/status').then(r=>r.json()).then(d=>{document.getElementById('teach-buffer').textContent=d.buffer_size;document.getElementById('teach-count').textContent=d.teach_count+' corrections';}).catch(()=>{});},3000);
 

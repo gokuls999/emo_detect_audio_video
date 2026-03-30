@@ -307,6 +307,7 @@ def _inference_loop():
 
             # ── audio inference (always run when speech detected) ──────
             audio_p = None
+            secondary = []
             if rms >= SILENCE_THRESH:
                 wav_t, spc_t = preprocess_audio(raw)
                 with torch.no_grad():
@@ -318,6 +319,8 @@ def _inference_loop():
                 hidden = out.get("hidden")
 
                 audio_p = torch.softmax(out["primary_logits"] / AUDIO_TEMP, dim=-1).cpu().numpy()[0]
+                sec_raw = torch.sigmoid(out["secondary_logits"]).cpu().numpy()[0]
+                secondary = [EMOTIONS[i] for i, v in enumerate(sec_raw) if v >= 0.30]
 
                 raw_stress = float(torch.sigmoid(out["stress_score"]).item())
                 valence    = float(torch.tanh(out["valence"]).item())
@@ -369,6 +372,7 @@ def _inference_loop():
                 active_speaker=pid,
                 active_speaker_name=pname,
                 source=source,
+                secondary=secondary,
             )
             state.latest_result = result
 
@@ -398,7 +402,7 @@ def _inference_loop():
                 now = time.time()
                 if now - state.last_auto_teach >= AUTO_LEARN_COOLDOWN:
                     state.last_auto_teach = now
-                    threading.Thread(target=lambda i=idx: _dash_auto_teach(i),
+                    threading.Thread(target=lambda i=idx, s=secondary: _dash_auto_teach(i, s),
                                      daemon=True).start()
         except Exception as e:
             print(f"[inference] {e}")
@@ -758,6 +762,20 @@ def dash_teach(body: DashTeachIn):
     threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
     return {"queued": True}
 
+class MultiTeachIn(BaseModel):
+    emotion_indices: list
+
+@app.post("/api/teach/multi")
+def dash_teach_multi(body: MultiTeachIn):
+    if not body.emotion_indices or any(i < 0 or i > 10 for i in body.emotion_indices):
+        raise HTTPException(400, "emotion_indices must be list of 0-10")
+    def _run(indices):
+        result = do_multi_teach_step(indices, source="dash")
+        if result.get("success"):
+            broadcast_from_thread({"type": "teach_ack", **result})
+    threading.Thread(target=_run, args=(body.emotion_indices,), daemon=True).start()
+    return {"queued": True}
+
 @app.post("/api/teach/save")
 def dash_teach_save():
     torch.save(_model.state_dict(), ONLINE_CKPT)
@@ -783,7 +801,7 @@ def dash_auto_learn(body: AutoLearnIn):
     print(f"[online] dash auto_learn {'ON' if body.enabled else 'OFF'}")
     return {"auto_learn": state.auto_learn}
 
-def _dash_auto_teach(idx: int):
+def _dash_auto_teach(idx: int, sec_indices: list = None):
     result = do_teach_step(idx, source="dash_auto")
     if result.get("success"):
         broadcast_from_thread({
@@ -792,6 +810,8 @@ def _dash_auto_teach(idx: int):
             "loss": result["loss"],
             "teach_count": state.teach_count,
         })
+    if sec_indices:
+        do_multi_teach_step(sec_indices, source="dash_auto")
 
 # ── YouTube test ──────────────────────────────────────────────────────────────
 try:
@@ -947,11 +967,51 @@ def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
         finally:
             _model.heads.eval()
 
+def do_multi_teach_step(emotion_indices: list, source: str = "yt") -> dict:
+    """Multi-label training step — BCEWithLogitsLoss on secondary head (sigmoid)."""
+    buf = yt_state.audio_buffer if source in ("yt", "yt_auto") else state.audio_buffer
+    with yt_state.teach_lock:
+        if not buf:
+            return {"success": False, "error": "No audio buffered yet"}
+        _init_online_training()
+        emb = buf[-1].to(device)
+        target = torch.zeros(1, 11, device=device)
+        for i in emotion_indices:
+            target[0, i] = 1.0
+        _model.heads.train()
+        try:
+            _online_optimizer.zero_grad()
+            out = _model.heads(emb)
+            loss = F.binary_cross_entropy_with_logits(
+                out["secondary_logits"], target,
+                pos_weight=torch.full((11,), 3.0, device=device),
+            )
+            if not torch.isfinite(loss):
+                return {"success": False, "error": "NaN loss"}
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(list(_model.heads.parameters()), ONLINE_GRAD_CLIP)
+            _online_optimizer.step()
+            yt_state.teach_count += 1
+            state.teach_count = yt_state.teach_count
+            taught_names = [EMOTIONS[i] for i in emotion_indices]
+            if yt_state.teach_count % ONLINE_SAVE_EVERY == 0:
+                torch.save(_model.state_dict(), ONLINE_CKPT)
+                print(f"[online] Checkpoint saved ({yt_state.teach_count} steps)")
+            print(f"[online] multi-teach #{yt_state.teach_count}: labels={taught_names} loss={loss.item():.4f}")
+            return {
+                "success": True,
+                "loss": round(loss.item(), 4),
+                "teach_count": yt_state.teach_count,
+                "taught_emotion": " + ".join(taught_names),
+            }
+        finally:
+            _model.heads.eval()
+
 # Auto-learn constants
 AUTO_LEARN_CONF_THRESHOLD = 0.62   # only teach if model is ≥62% confident
 AUTO_LEARN_COOLDOWN       = 12.0   # seconds between auto-teach steps
 
-def _auto_teach(idx: int):
+def _auto_teach(idx: int, sec_indices: list = None):
     """Called from _yt_infer thread — throttled pseudo-label self-training."""
     now = time.time()
     if now - yt_state.last_auto_teach < AUTO_LEARN_COOLDOWN:
@@ -965,6 +1025,8 @@ def _auto_teach(idx: int):
             "loss":           result["loss"],
             "teach_count":    result["teach_count"],
         })
+    if sec_indices:
+        do_multi_teach_step(sec_indices, source="yt_auto")
 
 # -- audio reader: ffmpeg pipe → queue ----------------------------------------
 def _yt_audio_reader():
@@ -1040,6 +1102,7 @@ def _yt_infer():
                         "arousal":    0.0,
                         "probs":      probs.tolist(),
                         "mode":       "face_only",
+                        "secondary":  [],
                     }
                     yt_state.latest = result
                     _yt_bcast_sync(result)
@@ -1061,6 +1124,8 @@ def _yt_infer():
             yt_state.audio_buffer.append(out["embedding"].detach().clone())
             raw_logits = out["primary_logits"].cpu().numpy()[0]
             ap  = torch.softmax(out["primary_logits"] / AUDIO_TEMP, dim=-1).cpu().numpy()[0]
+            sec_raw = torch.sigmoid(out["secondary_logits"]).cpu().numpy()[0]
+            secondary_yt = [EMOTIONS[i] for i, v in enumerate(sec_raw) if v >= 0.30]
             rs  = float(torch.sigmoid(out["stress_score"]).item())
             valence = float(torch.tanh(out["valence"]).item())
             arousal = float(torch.tanh(out["arousal"]).item())
@@ -1102,6 +1167,7 @@ def _yt_infer():
                 "probs":      probs.tolist(),
                 "mode":       mode,
                 "audio_rms":  round(rms, 4),
+                "secondary":  secondary_yt,
             }
             yt_state.latest = result
             _yt_bcast_sync(result)
@@ -1112,7 +1178,7 @@ def _yt_infer():
 
             # Auto-learn: always runs when video is playing and confidence is high enough
             if float(probs[idx]) >= AUTO_LEARN_CONF_THRESHOLD:
-                threading.Thread(target=_auto_teach, args=(idx,), daemon=True).start()
+                threading.Thread(target=_auto_teach, args=(idx, secondary_yt), daemon=True).start()
         except Exception as e:
             print(f"[yt_infer] {e}")
 
@@ -1275,6 +1341,21 @@ def yt_teach(body: YTTeachIn):
         if result.get("success"):
             _yt_bcast_sync({"type": "teach_ack", **result})
     threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
+    return {"queued": True}
+
+class YTMultiTeachIn(BaseModel):
+    emotion_indices: list
+
+@app.post("/api/yt/teach/multi")
+def yt_teach_multi(body: YTMultiTeachIn):
+    if not body.emotion_indices or any(i < 0 or i > 10 for i in body.emotion_indices):
+        raise HTTPException(400, "emotion_indices must be list of 0-10")
+    yt_state.last_auto_teach = time.time()
+    def _run(indices):
+        result = do_multi_teach_step(indices, source="yt")
+        if result.get("success"):
+            _yt_bcast_sync({"type": "teach_ack", **result})
+    threading.Thread(target=_run, args=(body.emotion_indices,), daemon=True).start()
     return {"queued": True}
 
 @app.post("/api/yt/teach/save")
