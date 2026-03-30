@@ -309,12 +309,12 @@ def _inference_loop():
             audio_p = None
             if rms >= SILENCE_THRESH:
                 wav_t, spc_t = preprocess_audio(raw)
-                # Buffer for online learning
-                if len(state.audio_buffer) >= state.BUFFER_SIZE:
-                    state.audio_buffer.pop(0)
-                state.audio_buffer.append((wav_t.detach().clone(), spc_t.detach().clone()))
                 with torch.no_grad():
                     out = _model(wav_t, spc_t, hidden=hidden)
+                # Buffer for online learning — store embedding so teach skips backbone
+                if len(state.audio_buffer) >= state.BUFFER_SIZE:
+                    state.audio_buffer.pop(0)
+                state.audio_buffer.append(out["embedding"].detach().clone())
                 hidden = out.get("hidden")
 
                 audio_p = torch.softmax(out["primary_logits"] / AUDIO_TEMP, dim=-1).cpu().numpy()[0]
@@ -751,16 +751,10 @@ class DashTeachIn(BaseModel):
 def dash_teach(body: DashTeachIn):
     if body.emotion_idx < 0 or body.emotion_idx > 10:
         raise HTTPException(400, "emotion_idx must be 0-10")
-    if yt_state.teach_busy:
-        return {"queued": False, "busy": True}
-    yt_state.teach_busy = True
     def _run(idx):
-        try:
-            result = do_teach_step(idx, source="dash")
-            if result.get("success"):
-                broadcast_from_thread({"type": "teach_ack", **result})
-        finally:
-            yt_state.teach_busy = False
+        result = do_teach_step(idx, source="dash")
+        if result.get("success"):
+            broadcast_from_thread({"type": "teach_ack", **result})
     threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
     return {"queued": True}
 
@@ -893,9 +887,8 @@ def _init_online_training():
     for p in _model.heads.parameters():
         p.requires_grad = True
 
-    trainable = [p for p in _model.parameters() if p.requires_grad]
+    trainable = list(_model.heads.parameters())
     _online_optimizer = torch.optim.AdamW(trainable, lr=ONLINE_LR, weight_decay=1e-4)
-    _online_scaler = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
 
     weights = [3.0, 2.0, 2.5, 0.8, 0.5, 1.5, 1.2, 1.0, 1.0, 1.0, 1.0]
     _ONLINE_CLASS_WEIGHTS = torch.tensor(weights, dtype=torch.float32, device=device)
@@ -905,40 +898,37 @@ def _init_online_training():
     print(f"[online] Training initialized. Trainable: {n:,} params")
 
 def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
-    """Single training step using last buffered audio + user label."""
+    """Single training step — uses cached embedding, skips backbone (fast)."""
     buf = yt_state.audio_buffer if source == "yt" else state.audio_buffer
     with yt_state.teach_lock:
         if not buf:
             return {"success": False, "error": "No audio buffered yet"}
         _init_online_training()
 
-        wav_t, spc_t = buf[-1]
+        emb = buf[-1].to(device)   # cached 256-dim embedding, no backbone needed
         label = torch.tensor([emotion_idx], dtype=torch.long, device=device)
 
-        _model.train()
+        _model.heads.train()
         try:
             _online_optimizer.zero_grad()
-            with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
-                out = _model(wav_t, spc_t)
-                loss = F.cross_entropy(
-                    out["primary_logits"], label,
-                    weight=_ONLINE_CLASS_WEIGHTS,
-                    label_smoothing=ONLINE_LABEL_SMOOTH,
-                )
+            out = _model.heads(emb)
+            loss = F.cross_entropy(
+                out["primary_logits"], label,
+                weight=_ONLINE_CLASS_WEIGHTS,
+                label_smoothing=ONLINE_LABEL_SMOOTH,
+            )
             if not torch.isfinite(loss):
                 return {"success": False, "error": "NaN loss"}
 
-            _online_scaler.scale(loss).backward()
-            _online_scaler.unscale_(_online_optimizer)
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(
-                [p for p in _model.parameters() if p.requires_grad],
+                [p for p in _model.heads.parameters()],
                 ONLINE_GRAD_CLIP,
             )
-            _online_scaler.step(_online_optimizer)
-            _online_scaler.update()
+            _online_optimizer.step()
 
             yt_state.teach_count += 1
-            state.teach_count = yt_state.teach_count  # keep in sync
+            state.teach_count = yt_state.teach_count
             loss_val = loss.item()
 
             if yt_state.teach_count % ONLINE_SAVE_EVERY == 0:
@@ -955,7 +945,7 @@ def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
                 "taught_emotion": EMOTIONS[emotion_idx],
             }
         finally:
-            _model.eval()
+            _model.heads.eval()
 
 # Auto-learn constants
 AUTO_LEARN_CONF_THRESHOLD = 0.62   # only teach if model is ≥62% confident
@@ -1063,13 +1053,12 @@ def _yt_infer():
             # ── audio model ──────────────────────────────────────────────
             wav_t, spc_t = preprocess_audio(raw)
 
-            # Buffer for online learning
-            if len(yt_state.audio_buffer) >= yt_state.BUFFER_SIZE:
-                yt_state.audio_buffer.pop(0)
-            yt_state.audio_buffer.append((wav_t.detach().clone(), spc_t.detach().clone()))
-
             with torch.no_grad():
                 out = _model(wav_t, spc_t)
+            # Buffer for online learning — store embedding so teach skips backbone
+            if len(yt_state.audio_buffer) >= yt_state.BUFFER_SIZE:
+                yt_state.audio_buffer.pop(0)
+            yt_state.audio_buffer.append(out["embedding"].detach().clone())
             raw_logits = out["primary_logits"].cpu().numpy()[0]
             ap  = torch.softmax(out["primary_logits"] / AUDIO_TEMP, dim=-1).cpu().numpy()[0]
             rs  = float(torch.sigmoid(out["stress_score"]).item())
@@ -1281,16 +1270,10 @@ def yt_teach(body: YTTeachIn):
     if body.emotion_idx < 0 or body.emotion_idx > 10:
         raise HTTPException(400, "emotion_idx must be 0-10")
     yt_state.last_auto_teach = time.time()  # pause auto-learn immediately
-    if yt_state.teach_busy:
-        return {"queued": False, "busy": True}
-    yt_state.teach_busy = True
     def _run(idx):
-        try:
-            result = do_teach_step(idx)
-            if result.get("success"):
-                _yt_bcast_sync({"type": "teach_ack", **result})
-        finally:
-            yt_state.teach_busy = False
+        result = do_teach_step(idx)
+        if result.get("success"):
+            _yt_bcast_sync({"type": "teach_ack", **result})
     threading.Thread(target=_run, args=(body.emotion_idx,), daemon=True).start()
     return {"queued": True}
 
