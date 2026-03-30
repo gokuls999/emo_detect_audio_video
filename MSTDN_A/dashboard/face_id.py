@@ -26,9 +26,14 @@ def _ensure_model():
             from insightface.app import FaceAnalysis
             _face_app = FaceAnalysis(
                 name="buffalo_l",
-                providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+                providers=[
+                    ("CUDAExecutionProvider", {"cudnn_conv_algo_search": "HEURISTIC"}),
+                    "CPUExecutionProvider",
+                ],
             )
             _face_app.prepare(ctx_id=0, det_size=(640, 640))
+            # warm up CUDA kernels so first real frame is fast
+            _face_app.get(np.zeros((640, 640, 3), dtype=np.uint8))
             _model_ready = True
             print("[face_id] InsightFace ArcFace model ready.")
         except Exception as e:

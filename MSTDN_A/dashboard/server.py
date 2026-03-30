@@ -887,18 +887,9 @@ def _init_online_training():
     global _online_optimizer, _online_scaler, _online_configured, _ONLINE_CLASS_WEIGHTS
     if _online_configured:
         return
-    # Freeze strategy — same as finetune_english_r2.configure_trainable
+    # For online correction: only train heads (linear layers) — fast per-click
     for p in _model.parameters():
         p.requires_grad = False
-    dab = _model.deep_audio_branch
-    if dab.enabled:
-        for layer in dab.model.encoder.layers[-4:]:
-            for p in layer.parameters():
-                p.requires_grad = True
-        for p in dab.proj.parameters():
-            p.requires_grad = True
-    for p in _model.fusion.parameters():
-        p.requires_grad = True
     for p in _model.heads.parameters():
         p.requires_grad = True
 

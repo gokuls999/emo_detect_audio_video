@@ -51,8 +51,13 @@ def _ensure():
                 print("[face_emotion] Download complete.")
             _session = ort.InferenceSession(
                 str(model_path),
-                providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+                providers=[
+                    ("CUDAExecutionProvider", {"cudnn_conv_algo_search": "HEURISTIC"}),
+                    "CPUExecutionProvider",
+                ],
             )
+            # warm up CUDA kernels
+            _session.run(None, {"Input3": np.zeros((1, 1, 64, 64), dtype=np.float32)})
             _cascade = cv2.CascadeClassifier(
                 cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
             )
