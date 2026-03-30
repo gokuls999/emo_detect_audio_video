@@ -139,6 +139,8 @@ class AppState:
     audio_buffer: list                       = []   # circular buffer of (wav_t, spc_t)
     BUFFER_SIZE:  int                        = 8
     teach_count:  int                        = 0
+    auto_learn:   bool                       = False
+    last_auto_teach: float                   = 0.0
     # Blend weights (user-adjustable via /api/blend)
     audio_weight: float                      = 0.5
     face_weight:  float                      = 0.5
@@ -390,6 +392,14 @@ def _inference_loop():
                                    "history": state._history,
                                    "rms1": round(rms1, 4),
                                    "rms2": round(rms2, 4)})
+
+            # ── auto-learn: self-correct when confident ─────────────────
+            if state.auto_learn and conf >= AUTO_LEARN_CONF_THRESHOLD:
+                now = time.time()
+                if now - state.last_auto_teach >= AUTO_LEARN_COOLDOWN:
+                    state.last_auto_teach = now
+                    threading.Thread(target=lambda i=idx: _dash_auto_teach(i),
+                                     daemon=True).start()
         except Exception as e:
             print(f"[inference] {e}")
 
@@ -758,7 +768,28 @@ def dash_teach_status():
         "buffer_size": len(state.audio_buffer),
         "configured": _online_configured,
         "checkpoint": str(ONLINE_CKPT),
+        "auto_learn": state.auto_learn,
     }
+
+class AutoLearnIn(BaseModel):
+    enabled: bool
+
+@app.post("/api/teach/auto_learn")
+def dash_auto_learn(body: AutoLearnIn):
+    state.auto_learn = body.enabled
+    state.last_auto_teach = 0.0
+    print(f"[online] dash auto_learn {'ON' if body.enabled else 'OFF'}")
+    return {"auto_learn": state.auto_learn}
+
+def _dash_auto_teach(idx: int):
+    result = do_teach_step(idx, source="dash_auto")
+    if result.get("success"):
+        broadcast_from_thread({
+            "type": "auto_teach_ack",
+            "taught_emotion": result["taught_emotion"],
+            "loss": result["loss"],
+            "teach_count": state.teach_count,
+        })
 
 # ── YouTube test ──────────────────────────────────────────────────────────────
 try:

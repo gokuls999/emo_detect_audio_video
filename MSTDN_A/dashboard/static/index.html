@@ -107,18 +107,18 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .face-indicator .fi-conf{color:var(--text-muted);font-size:12px}
 
 /* top-right: emotion panel */
-.emotion-cell{padding:12px 12px 12px 0;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.emotion-cell{padding:8px 10px 8px 0;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
 .emotion-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.emo-accent{height:4px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:background .3s}
-.emo-body{padding:14px 18px}
+.emo-accent{height:3px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:background .3s}
+.emo-body{padding:10px 14px}
 
-.detected-row{display:flex;align-items:center;gap:14px;margin-bottom:10px}
-.face-icon{width:60px;height:60px;flex-shrink:0}
+.detected-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.face-icon{width:44px;height:44px;flex-shrink:0}
 .face-icon circle,.face-icon ellipse,.face-icon path,.face-icon line{transition:all .3s}
 .detected-info{flex:1}
-.emo-label{font-size:34px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
-.emo-conf{font-size:15px;color:var(--text-muted);font-weight:500}
-.source-badge{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.emo-label{font-size:24px;font-weight:700;color:var(--text);transition:color .3s;line-height:1.1}
+.emo-conf{font-size:13px;color:var(--text-muted);font-weight:500}
+.source-badge{display:inline-flex;align-items:center;gap:4px;margin-top:2px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
 .source-badge.src-audio{background:#dbeafe;color:#2563eb}
 .source-badge.src-face{background:#dcfce7;color:#16a34a}
 .source-badge.src-both{background:#ede9fe;color:#7c3aed}
@@ -130,23 +130,23 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .source-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse-dot 1.5s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
 
-.metrics{display:flex;gap:8px;margin-bottom:10px}
-.metric-card{flex:1;background:var(--bg-input);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid var(--border-light)}
-.metric-label{font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
-.metric-val{font-size:22px;font-weight:700}
+.metrics{display:flex;gap:6px;margin-bottom:6px}
+.metric-card{flex:1;background:var(--bg-input);border-radius:6px;padding:4px 8px;text-align:center;border:1px solid var(--border-light)}
+.metric-label{font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.metric-val{font-size:17px;font-weight:700}
 .metric-stress .metric-val{color:#ef4444}
 .metric-valence .metric-val{color:#22c55e}
 .metric-arousal .metric-val{color:#f59e0b}
 
-.alert-banner{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger-text);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600;margin-bottom:8px;display:none;text-align:center}
+.alert-banner{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger-text);border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;margin-bottom:4px;display:none;text-align:center}
 
-.dist-section{margin-bottom:6px}
-.dist-title{font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px}
-.dist-row{display:grid;grid-template-columns:100px 1fr 36px;align-items:center;gap:6px;margin-bottom:4px}
-.dist-label{font-size:14px;color:var(--text-inv);text-align:right;font-weight:500}
-.dist-track{height:8px;background:var(--bg-hover);border-radius:4px;overflow:hidden}
-.dist-fill{height:100%;border-radius:4px;transition:width .4s}
-.dist-pct{font-size:12px;color:var(--text-muted);text-align:right;font-family:monospace}
+.dist-section{margin-bottom:4px}
+.dist-title{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px}
+.dist-row{display:grid;grid-template-columns:80px 1fr 30px;align-items:center;gap:4px;margin-bottom:2px}
+.dist-label{font-size:11px;color:var(--text-inv);text-align:right;font-weight:500}
+.dist-track{height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
+.dist-fill{height:100%;border-radius:3px;transition:width .4s}
+.dist-pct{font-size:10px;color:var(--text-muted);text-align:right;font-family:monospace}
 
 /* bottom-left: participants */
 .participants-cell{padding:0 12px 12px;display:flex;flex-direction:column;overflow:hidden}
@@ -179,30 +179,36 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .focus-select:focus{border-color:var(--accent)}
 
 /* bottom-right: tabs */
-.tabs-cell{padding:0 12px 12px 0;display:flex;flex-direction:column;overflow:hidden}
+.tabs-cell{padding:0 10px 8px 0;display:flex;flex-direction:column;overflow:hidden}
 .tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.tab-btn{flex:1;text-align:center;padding:10px;font-size:14px;cursor:pointer;color:var(--text-muted);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.tab-btn{flex:1;text-align:center;padding:7px;font-size:12px;cursor:pointer;color:var(--text-muted);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab-btn:hover{color:var(--text)}
-.tab-content{flex:1;overflow-y:auto;min-height:0;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:14px 16px}
+.tab-content{flex:1;overflow-y:auto;min-height:0;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px}
 
 /* teach panel */
-.teach-section{margin-bottom:8px}
-.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.teach-title{font-size:13px;font-weight:600;color:var(--text-inv);letter-spacing:.3px;text-transform:uppercase}
-.teach-count{font-size:12px;color:var(--accent);font-weight:600}
-.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.teach-btn{padding:9px 6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:13px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
+.teach-section{margin-bottom:4px}
+.teach-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.teach-title{font-size:11px;font-weight:600;color:var(--text-inv);letter-spacing:.3px;text-transform:uppercase}
+.teach-count{font-size:11px;color:var(--accent);font-weight:600}
+.teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.teach-btn{padding:6px 4px 7px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:11px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
 .teach-btn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .teach-btn:active{transform:scale(.97)}
 .teach-btn.taught{border-color:var(--success);background:var(--success-bg);color:var(--success-deep);animation:pulse .4s}
-.teach-face{width:22px;height:22px;display:block;margin:0 auto 3px}
+.teach-face{width:18px;height:18px;display:block;margin:0 auto 2px}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}100%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-.teach-feedback{font-size:12px;color:var(--text-muted);margin-top:6px;min-height:16px;text-align:center}
-.teach-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
-.teach-buffer{font-size:12px;color:var(--text-muted)}
-.btn-save{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-inv);cursor:pointer;font-size:12px;font-weight:600}
+.teach-feedback{font-size:11px;color:var(--text-muted);margin-top:4px;min-height:14px;text-align:center}
+.teach-footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.teach-buffer{font-size:11px;color:var(--text-muted)}
+.btn-save{padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-inv);cursor:pointer;font-size:11px;font-weight:600}
 .btn-save:hover{border-color:var(--accent);color:var(--accent)}
+
+/* auto-learn strip */
+.auto-learn-strip{display:flex;align-items:center;gap:8px;padding:5px 0;margin-top:4px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)}
+.auto-learn-strip label{display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:600}
+.auto-learn-strip input[type="checkbox"]{width:14px;height:14px;accent-color:var(--accent)}
+.auto-learn-strip .al-status{margin-left:auto;font-size:11px;color:var(--text-muted)}
 
 /* section clear buttons */
 .section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -468,9 +474,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
         </div>
         <div class="teach-grid" id="dash-teach-grid"></div>
         <div class="teach-feedback" id="dash-teach-feedback">Click an emotion to correct the model</div>
-        <div class="teach-footer">
-          <span class="teach-buffer">Buffer: <span id="dash-teach-buffer">0</span> chunks</span>
-          <button class="btn-save" onclick="dashTeachSave()">Save Checkpoint</button>
+        <div class="auto-learn-strip">
+          <label><input type="checkbox" id="dash-auto-learn" onchange="toggleDashAutoLearn(this.checked)"> Auto-Learn</label>
+          <span class="al-status" id="dash-auto-status">Off</span>
+          <span class="teach-buffer">Buffer: <span id="dash-teach-buffer">0</span></span>
+          <button class="btn-save" onclick="dashTeachSave()">Save</button>
         </div>
       </div>
     </div>
@@ -669,6 +677,11 @@ function handleMsg(d){
     faceStatus[d.participant_id]=true;
     renderParticipants();
     showToast("Face registered for "+d.name,"success");
+  }
+  else if(d.type==="auto_teach_ack"){
+    document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
+    document.getElementById('dash-teach-feedback').textContent=
+      '🤖 Auto-taught: '+d.taught_emotion+' (loss: '+d.loss+')';
   }
   else if(d.type==="emotion_update"){
     applyResult(d);
@@ -1321,10 +1334,26 @@ function dashTeachSave(){
   });
 }
 
+function toggleDashAutoLearn(enabled){
+  fetch('/api/teach/auto_learn',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({enabled})})
+  .then(r=>r.json()).then(d=>{
+    const s=document.getElementById('dash-auto-status');
+    s.textContent=d.auto_learn?'On — auto teaching':'Off';
+    s.style.color=d.auto_learn?'var(--success)':'var(--text-muted)';
+    document.getElementById('dash-teach-feedback').textContent=
+      d.auto_learn?'Auto-learn ON: model corrects itself when confident':'Auto-learn OFF';
+  });
+}
+
 setInterval(()=>{
   fetch('/api/teach/status').then(r=>r.json()).then(d=>{
     document.getElementById('dash-teach-buffer').textContent=d.buffer_size;
     document.getElementById('dash-teach-count').textContent=d.teach_count+' corrections';
+    const cb=document.getElementById('dash-auto-learn');
+    if(cb) cb.checked=!!d.auto_learn;
+    const s=document.getElementById('dash-auto-status');
+    if(s){s.textContent=d.auto_learn?'On — auto teaching':'Off';s.style.color=d.auto_learn?'var(--success)':'var(--text-muted)';}
   }).catch(()=>{});
 },3000);
 
