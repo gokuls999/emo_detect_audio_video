@@ -141,6 +141,7 @@ class AppState:
     teach_count:  int                        = 0
     auto_learn:   bool                       = False
     last_auto_teach: float                   = 0.0
+    last_secondary: list                     = []   # carry-forward last known secondary emotions
     # Blend weights (user-adjustable via /api/blend)
     audio_weight: float                      = 0.5
     face_weight:  float                      = 0.5
@@ -308,6 +309,7 @@ def _inference_loop():
             # ── audio inference (always run when speech detected) ──────
             audio_p = None
             secondary = []
+            secondary_idx = []
             if rms >= SILENCE_THRESH:
                 wav_t, spc_t = preprocess_audio(raw)
                 with torch.no_grad():
@@ -321,6 +323,9 @@ def _inference_loop():
                 audio_p = torch.softmax(out["primary_logits"] / AUDIO_TEMP, dim=-1).cpu().numpy()[0]
                 sec_raw = torch.sigmoid(out["secondary_logits"]).cpu().numpy()[0]
                 secondary = [EMOTIONS[i] for i, v in enumerate(sec_raw) if v >= 0.30]
+                secondary_idx = [i for i, v in enumerate(sec_raw) if v >= 0.30]
+                if secondary:
+                    state.last_secondary = secondary
 
                 raw_stress = float(torch.sigmoid(out["stress_score"]).item())
                 valence    = float(torch.tanh(out["valence"]).item())
@@ -372,7 +377,7 @@ def _inference_loop():
                 active_speaker=pid,
                 active_speaker_name=pname,
                 source=source,
-                secondary=secondary,
+                secondary=secondary if secondary else state.last_secondary,
             )
             state.latest_result = result
 
@@ -402,7 +407,7 @@ def _inference_loop():
                 now = time.time()
                 if now - state.last_auto_teach >= AUTO_LEARN_COOLDOWN:
                     state.last_auto_teach = now
-                    threading.Thread(target=lambda i=idx, s=secondary: _dash_auto_teach(i, s),
+                    threading.Thread(target=lambda i=idx, s=secondary_idx: _dash_auto_teach(i, s),
                                      daemon=True).start()
         except Exception as e:
             print(f"[inference] {e}")
@@ -441,6 +446,11 @@ async def ws_endpoint(ws: WebSocket):
 # ── REST: root ────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
+    return FileResponse(str(STATIC / "index.html"))
+
+@app.get("/multi")
+def multi_dashboard():
+    """Multi-emotion main dashboard (same HTML, pathname-based mode)."""
     return FileResponse(str(STATIC / "index.html"))
 
 # ── REST: audio devices ───────────────────────────────────────────────────────
@@ -606,12 +616,16 @@ def session_alerts_api(sid: int):
     return get_alerts(sid)
 
 @app.get("/api/session/{sid}/export")
-def session_export(sid: int):
-    from dashboard.pdf_report import export_pdf
-    path = str(BASE / f"session_{sid}_report.pdf")
-    export_pdf(sid, path)
+def session_export(sid: int, mode: str = "single"):
+    from dashboard.pdf_report import export_pdf, export_pdf_multi
+    suffix = "_multi" if mode == "multi" else ""
+    path = str(BASE / f"session_{sid}_report{suffix}.pdf")
+    if mode == "multi":
+        export_pdf_multi(sid, path)
+    else:
+        export_pdf(sid, path)
     return FileResponse(path, media_type="application/pdf",
-                        filename=f"session_{sid}_report.pdf")
+                        filename=f"session_{sid}_report{suffix}.pdf")
 
 # ── REST: participants ────────────────────────────────────────────────────────
 class ParticipantIn(BaseModel):
@@ -811,7 +825,7 @@ def _dash_auto_teach(idx: int, sec_indices: list = None):
             "teach_count": state.teach_count,
         })
     if sec_indices:
-        do_multi_teach_step(sec_indices, source="dash_auto")
+        do_multi_teach_step(sec_indices, source="dash_auto", _count=False)
 
 # ── YouTube test ──────────────────────────────────────────────────────────────
 try:
@@ -846,6 +860,7 @@ class YTState:
     # Auto-learn
     auto_learn:        bool        = False  # auto teach from own predictions
     last_auto_teach:   float       = 0.0   # throttle timer
+    last_secondary:    list        = []    # carry-forward last known secondary emotions
     # History for PDF report
     history:           list        = []     # list of inference result dicts (capped at 1000)
     _url:              str         = ""     # current YouTube URL
@@ -967,7 +982,7 @@ def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
         finally:
             _model.heads.eval()
 
-def do_multi_teach_step(emotion_indices: list, source: str = "yt") -> dict:
+def do_multi_teach_step(emotion_indices: list, source: str = "yt", _count: bool = True) -> dict:
     """Multi-label training step — BCEWithLogitsLoss on secondary head (sigmoid)."""
     buf = yt_state.audio_buffer if source in ("yt", "yt_auto") else state.audio_buffer
     with yt_state.teach_lock:
@@ -991,8 +1006,9 @@ def do_multi_teach_step(emotion_indices: list, source: str = "yt") -> dict:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(list(_model.heads.parameters()), ONLINE_GRAD_CLIP)
             _online_optimizer.step()
-            yt_state.teach_count += 1
-            state.teach_count = yt_state.teach_count
+            if _count:
+                yt_state.teach_count += 1
+                state.teach_count = yt_state.teach_count
             taught_names = [EMOTIONS[i] for i in emotion_indices]
             if yt_state.teach_count % ONLINE_SAVE_EVERY == 0:
                 torch.save(_model.state_dict(), ONLINE_CKPT)
@@ -1026,7 +1042,7 @@ def _auto_teach(idx: int, sec_indices: list = None):
             "teach_count":    result["teach_count"],
         })
     if sec_indices:
-        do_multi_teach_step(sec_indices, source="yt_auto")
+        do_multi_teach_step(sec_indices, source="yt_auto", _count=False)
 
 # -- audio reader: ffmpeg pipe → queue ----------------------------------------
 def _yt_audio_reader():
@@ -1102,7 +1118,7 @@ def _yt_infer():
                         "arousal":    0.0,
                         "probs":      probs.tolist(),
                         "mode":       "face_only",
-                        "secondary":  [],
+                        "secondary":  yt_state.last_secondary,
                     }
                     yt_state.latest = result
                     _yt_bcast_sync(result)
@@ -1126,6 +1142,9 @@ def _yt_infer():
             ap  = torch.softmax(out["primary_logits"] / AUDIO_TEMP, dim=-1).cpu().numpy()[0]
             sec_raw = torch.sigmoid(out["secondary_logits"]).cpu().numpy()[0]
             secondary_yt = [EMOTIONS[i] for i, v in enumerate(sec_raw) if v >= 0.30]
+            secondary_yt_idx = [i for i, v in enumerate(sec_raw) if v >= 0.30]
+            if secondary_yt:
+                yt_state.last_secondary = secondary_yt
             rs  = float(torch.sigmoid(out["stress_score"]).item())
             valence = float(torch.tanh(out["valence"]).item())
             arousal = float(torch.tanh(out["arousal"]).item())
@@ -1167,7 +1186,7 @@ def _yt_infer():
                 "probs":      probs.tolist(),
                 "mode":       mode,
                 "audio_rms":  round(rms, 4),
-                "secondary":  secondary_yt,
+                "secondary":  secondary_yt if secondary_yt else yt_state.last_secondary,
             }
             yt_state.latest = result
             _yt_bcast_sync(result)
@@ -1176,9 +1195,9 @@ def _yt_infer():
             if len(yt_state.history) < 1000:
                 yt_state.history.append(result)
 
-            # Auto-learn: always runs when video is playing and confidence is high enough
-            if float(probs[idx]) >= AUTO_LEARN_CONF_THRESHOLD:
-                threading.Thread(target=_auto_teach, args=(idx, secondary_yt), daemon=True).start()
+            # Auto-learn: only when enabled and confidence is high enough
+            if yt_state.auto_learn and float(probs[idx]) >= AUTO_LEARN_CONF_THRESHOLD:
+                threading.Thread(target=_auto_teach, args=(idx, secondary_yt_idx), daemon=True).start()
         except Exception as e:
             print(f"[yt_infer] {e}")
 
@@ -1188,6 +1207,11 @@ threading.Thread(target=_yt_infer,        daemon=True).start()
 
 @app.get("/yt_test")
 def yt_test_page():
+    return FileResponse(str(STATIC / "yt_test.html"))
+
+@app.get("/yt_test/multi")
+def yt_test_multi_page():
+    """Multi-emotion YT test page (same HTML, pathname-based mode)."""
     return FileResponse(str(STATIC / "yt_test.html"))
 
 class YTLoadIn(BaseModel):
@@ -1373,11 +1397,17 @@ def yt_teach_status():
         "auto_learn": yt_state.auto_learn,
     }
 
+@app.get("/api/yt/history")
+def yt_history_api(limit: int = 60):
+    """Return the last N YT inference readings for the history panel."""
+    h = yt_state.history[-limit:] if yt_state.history else []
+    return {"history": h, "total": len(yt_state.history)}
+
 @app.get("/api/yt/report")
-def yt_report():
+def yt_report(mode: str = "single"):
     """Generate and download a PDF report for the current YT session."""
     import tempfile
-    from dashboard.pdf_report import export_yt_pdf
+    from dashboard.pdf_report import export_yt_pdf, export_yt_pdf_multi
 
     history = yt_state.history
     if not history:
@@ -1410,9 +1440,12 @@ def yt_report():
 
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     tmp.close()
-    export_yt_pdf(data, tmp.name)
-    return FileResponse(tmp.name, media_type="application/pdf",
-                        filename=f"MSTDN_YT_Report.pdf")
+    fname = "MSTDN_YT_MultiEmotion_Report.pdf" if mode == "multi" else "MSTDN_YT_Report.pdf"
+    if mode == "multi":
+        export_yt_pdf_multi(data, tmp.name)
+    else:
+        export_yt_pdf(data, tmp.name)
+    return FileResponse(tmp.name, media_type="application/pdf", filename=fname)
 
 @app.post("/api/yt/blend")
 def yt_set_blend(body: BlendIn):
@@ -1423,9 +1456,6 @@ def yt_set_blend(body: BlendIn):
 @app.get("/api/yt/blend")
 def yt_get_blend():
     return {"audio": yt_state.audio_weight, "face": yt_state.face_weight}
-
-class AutoLearnIn(BaseModel):
-    enabled: bool
 
 @app.post("/api/yt/auto_learn")
 def yt_auto_learn(body: AutoLearnIn):

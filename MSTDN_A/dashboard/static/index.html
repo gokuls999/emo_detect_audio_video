@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MSTDN-A | Emotion Intelligence Dashboard</title>
+<title id="page-title">MSTDN-A | Emotion Intelligence Dashboard</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
@@ -304,10 +304,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .blend-slider input[type="range"]{flex:1;height:6px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none}
 .blend-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
 .blend-slider input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg-card)}
-/* view mode toggle */
-.view-toggle{display:flex;align-items:center;gap:4px;margin-bottom:3px}
-.view-toggle-btn{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:10px;font-weight:600;cursor:pointer;transition:all .12s}
-.view-toggle-btn.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+/* mode badge (replaces view toggle) */
+.mode-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-bottom:3px;letter-spacing:.3px;text-transform:uppercase}
 /* secondary emotion chips */
 .secondary-row{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px;min-height:14px}
 .multi-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:var(--bg-hover);color:var(--text-sec);border:1px solid var(--border)}
@@ -330,7 +328,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
   <div class="topnav-left">
     <div class="logo"><span>MSTDN</span>-A</div>
     <div class="nav-divider"></div>
-    <div class="nav-label">Dashboard</div>
+    <div class="nav-label" id="dash-mode-label">Dashboard</div>
     <div class="status-chip status-idle" id="session-badge">
       <div class="status-dot"></div>
       <span id="session-badge-text">No Session</span>
@@ -366,8 +364,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
       Face ID
     </label>
     <div class="nav-divider"></div>
-    <button class="nav-btn" onclick="if(sessionId) window.open('/api/session/'+sessionId+'/export')" title="Download PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
-    <a href="/yt_test" class="nav-link">YT Test</a>
+    <button class="nav-btn" id="pdf-btn" onclick="downloadPDF()" title="Download PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+    <a id="yt-nav-link" href="/yt_test" class="nav-link">YT Test</a>
+    <a id="mode-switch-link" href="/multi" class="nav-link" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;background:var(--accent-bg);color:var(--accent);font-weight:600;font-size:13px">◈ Multi Mode</a>
     <button class="nav-btn" onclick="showSessionsTab()" title="View past sessions"><i class="bi bi-clock-history"></i> History</button>
     <div class="nav-divider"></div>
     <button id="btn-start" class="nav-btn nav-btn-success" onclick="openModal('startModal')"><i class="bi bi-play-fill"></i> Start</button>
@@ -441,10 +440,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
         <div class="detected-row">
           <div id="face-container"></div>
           <div class="detected-info">
-            <div class="view-toggle">
-              <button class="view-toggle-btn active" id="dash-btn-single" onclick="setDashViewMode('single')">☰ Single</button>
-              <button class="view-toggle-btn" id="dash-btn-multi" onclick="setDashViewMode('multi')">◈ Multi</button>
-            </div>
+            <div class="mode-badge" id="dash-mode-badge"></div>
             <div class="emo-label" id="emo-label">Neutral</div>
             <div class="secondary-row" id="dash-secondary-row"></div>
             <div class="emo-conf" id="emo-conf">--</div>
@@ -909,8 +905,8 @@ function applyResult(d){
   document.getElementById("rs-stress").textContent=d.stress!=null?(d.stress*100).toFixed(0)+"%":"--";
   document.getElementById("rs-valence").textContent=d.valence!=null?d.valence.toFixed(2):"--";
 
-  // secondary emotion chips (multi-view only)
-  if(dashViewMode==='multi') renderDashSecondaryChips(d.secondary||[]);
+  // secondary emotion chips (multi mode only)
+  if(DASH_MODE==='multi') renderDashSecondaryChips(d.secondary||[]);
   else document.getElementById('dash-secondary-row').innerHTML='';
 
   // prob bars
@@ -1244,7 +1240,7 @@ async function loadSessions(){
           <div class="h-item-date">${s.start} &mdash; ${s.participants||0} participants</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="export-btn" onclick="window.open('/api/session/${s.id}/export')"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+          <button class="export-btn" onclick="window.open('/api/session/${s.id}/export?mode='+DASH_MODE)"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
           <button class="btn-clear" onclick="clearSession('${s.id}')" title="Delete session"><i class="bi bi-trash"></i></button>
         </div>
       </div>`).join('');
@@ -1361,20 +1357,53 @@ function dashTeach(idx,btn){
     .catch(()=>{});
 }
 
-// ── view mode (single / multi) ──────────────────────────────────────────────────
-let dashViewMode = localStorage.getItem('mstdn-view-mode') || 'single';
-let dashMultiSel = new Set();
+// ── mode detection from URL path ───────────────────────────────────────────────
+const DASH_MODE = location.pathname.startsWith('/multi') ? 'multi' : 'single';
 
-function setDashViewMode(mode){
-  dashViewMode = mode;
-  localStorage.setItem('mstdn-view-mode', mode);
-  document.getElementById('dash-btn-single').classList.toggle('active', mode==='single');
-  document.getElementById('dash-btn-multi').classList.toggle('active', mode==='multi');
-  // Single-teach grid always visible — multi mode adds the multi-section on top
-  document.getElementById('dash-multi-teach').classList.toggle('visible', mode==='multi');
-  dashClearMultiSel();
-  if(mode==='single') document.getElementById('dash-secondary-row').innerHTML='';
+// Apply mode to page
+(function initDashMode(){
+  const isMulti = DASH_MODE === 'multi';
+  // Page title & nav label
+  document.getElementById('page-title').textContent =
+    isMulti ? 'MSTDN-A | Multi-Emotion Dashboard' : 'MSTDN-A | Emotion Intelligence Dashboard';
+  document.getElementById('dash-mode-label').textContent =
+    isMulti ? 'Multi-Emotion Dashboard' : 'Dashboard';
+  // Mode badge in emotion card
+  const badge = document.getElementById('dash-mode-badge');
+  badge.textContent = isMulti ? '◈ Multi-Emotion' : '☰ Single Emotion';
+  badge.style.cssText = isMulti
+    ? 'background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;margin-bottom:3px'
+    : 'background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;margin-bottom:3px';
+  // Mode switch link in nav
+  const switchLink = document.getElementById('mode-switch-link');
+  if(isMulti){
+    switchLink.href = '/'; switchLink.textContent = '☰ Single Mode';
+    switchLink.style.background = 'var(--bg-hover)'; switchLink.style.color = 'var(--text-sec)';
+  } else {
+    switchLink.href = '/multi'; switchLink.textContent = '◈ Multi Mode';
+    switchLink.style.background = 'var(--accent-bg)'; switchLink.style.color = 'var(--accent)';
+  }
+  // YT Test link goes to matching mode
+  document.getElementById('yt-nav-link').href = isMulti ? '/yt_test/multi' : '/yt_test';
+  // Show correct teach section
+  const singleGrid = document.getElementById('dash-teach-grid');
+  const multiSection = document.getElementById('dash-multi-teach');
+  if(isMulti){
+    singleGrid.style.display = 'none';
+    multiSection.classList.add('visible');
+  } else {
+    singleGrid.style.display = '';
+    multiSection.classList.remove('visible');
+  }
+})();
+
+// ── PDF download (mode-aware) ───────────────────────────────────────────────────
+function downloadPDF(){
+  if(sessionId) window.open('/api/session/'+sessionId+'/export?mode='+DASH_MODE);
 }
+
+// ── multi-teach state ───────────────────────────────────────────────────────────
+let dashMultiSel = new Set();
 
 function dashClearMultiSel(){
   dashMultiSel.clear();
@@ -1451,7 +1480,6 @@ setInterval(()=>{
 
 // ── init ───────────────────────────────────────────────────────────────────────
 document.getElementById("face-container").innerHTML=faceSVG("Neutral");
-setDashViewMode(dashViewMode);
 connectWS();
 </script>
 </body>

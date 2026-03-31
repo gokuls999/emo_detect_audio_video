@@ -803,3 +803,522 @@ def export_yt_pdf(data: dict, out_path: str) -> None:
         story.append(Spacer(1, 5*mm))
 
     doc.build(story)
+
+
+# ── multi-emotion page background ────────────────────────────────────────────
+def _add_multi_page_bg(canvas, doc):
+    canvas.saveState()
+    w, h = A4
+    canvas.setFillColor(CARD)
+    canvas.rect(0, h - 20*mm, w, 20*mm, fill=1, stroke=0)
+    canvas.setFillColor(PURPLE)
+    canvas.rect(0, h - 20*mm, 3*mm, 20*mm, fill=1, stroke=0)
+    canvas.setFillColor(TEXT)
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.drawString(10*mm, h - 12*mm, "MSTDN-A")
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 9)
+    canvas.drawString(27*mm, h - 12*mm, "Multi-Emotion Intelligence Report")
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 7)
+    canvas.drawRightString(w - 10*mm, h - 12*mm,
+                           f"Generated {datetime.now().strftime('%d %b %Y  %H:%M')}")
+    canvas.setFillColor(CARD)
+    canvas.rect(0, 0, w, 9*mm, fill=1, stroke=0)
+    canvas.setStrokeColor(BORDER)
+    canvas.setLineWidth(0.3)
+    canvas.line(0, 9*mm, w, 9*mm)
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 6.5)
+    canvas.drawCentredString(w / 2, 3*mm,
+                             f"Page {doc.page}  \u00b7  MSTDN-A Multi-Emotion Detection")
+    canvas.restoreState()
+
+
+def _add_multi_yt_page_bg(canvas, doc):
+    canvas.saveState()
+    w, h = A4
+    canvas.setFillColor(CARD)
+    canvas.rect(0, h - 20*mm, w, 20*mm, fill=1, stroke=0)
+    canvas.setFillColor(PURPLE)
+    canvas.rect(0, h - 20*mm, 3*mm, 20*mm, fill=1, stroke=0)
+    canvas.setFillColor(TEXT)
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.drawString(10*mm, h - 12*mm, "MSTDN-A")
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 9)
+    canvas.drawString(27*mm, h - 12*mm, "Multi-Emotion YouTube Analysis Report")
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 7)
+    canvas.drawRightString(w - 10*mm, h - 12*mm,
+                           f"Generated {datetime.now().strftime('%d %b %Y  %H:%M')}")
+    canvas.setFillColor(CARD)
+    canvas.rect(0, 0, w, 9*mm, fill=1, stroke=0)
+    canvas.setStrokeColor(BORDER)
+    canvas.setLineWidth(0.3)
+    canvas.line(0, 9*mm, w, 9*mm)
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 6.5)
+    canvas.drawCentredString(w / 2, 3*mm,
+                             f"Page {doc.page}  \u00b7  MSTDN-A Multi-Emotion YouTube Analysis")
+    canvas.restoreState()
+
+
+# ── secondary emotion co-occurrence bars ─────────────────────────────────────
+class SecondaryBars(Flowable):
+    """Bar chart of secondary emotion occurrence counts."""
+    BAR_H = 9
+    GAP   = 4
+
+    def __init__(self, sec_counts: dict, total_readings: int, width: float):
+        super().__init__()
+        self.total = max(total_readings, 1)
+        self.items = sorted(
+            [(e, sec_counts.get(e, 0)) for e in EMOTIONS if sec_counts.get(e, 0) > 0],
+            key=lambda x: -x[1]
+        )
+        self.width  = width
+        self.height = len(self.items) * (self.BAR_H + self.GAP) + 4 if self.items else 14
+        self._lw    = 28 * mm
+        self._pw    = 16 * mm
+
+    def draw(self):
+        if not self.items:
+            self.canv.setFillColor(MUTED)
+            self.canv.setFont("Helvetica", 8)
+            self.canv.drawString(0, 4, "No secondary emotions detected.")
+            return
+        w   = float(self.width)
+        bar = w - self._lw - self._pw - 3
+        y   = float(self.height) - self.BAR_H - 2
+        max_cnt = self.items[0][1]
+
+        for emo, cnt in self.items:
+            ei  = EMOTIONS.index(emo) if emo in EMOTIONS else 0
+            col = EMO_COLORS[ei]
+            pct = cnt / max_cnt if max_cnt > 0 else 0
+            freq = cnt / self.total
+            bw  = bar * pct
+
+            self.canv.setFont("Helvetica", 7)
+            self.canv.setFillColor(TEXT)
+            self.canv.drawString(0, y + 1.5, emo)
+
+            self.canv.setFillColor(TRACK_BG)
+            self.canv.roundRect(self._lw, y, bar, self.BAR_H, 2, fill=1, stroke=0)
+            if bw > 2:
+                self.canv.setFillColor(col)
+                self.canv.roundRect(self._lw, y, bw, self.BAR_H, 2, fill=1, stroke=0)
+
+            self.canv.setFont("Helvetica-Bold", 6.5)
+            self.canv.setFillColor(TEXT)
+            self.canv.drawString(self._lw + bar + 3, y + 1.5,
+                                 f"{cnt}x  ({freq*100:.0f}%)")
+            y -= (self.BAR_H + self.GAP)
+
+
+# ── multi-emotion session PDF ─────────────────────────────────────────────────
+def export_pdf_multi(session_id: int, out_path: str) -> None:
+    """Multi-emotion variant: adds secondary emotion co-occurrence section to session PDF."""
+    from dashboard.database import get_session, get_participants, get_readings, \
+        get_alerts, session_summary
+    import json as _json
+
+    sess   = get_session(session_id)
+    if not sess:
+        raise ValueError(f"Session {session_id} not found")
+    parts  = get_participants(session_id)
+    summ   = session_summary(session_id)
+    alerts = get_alerts(session_id)
+    all_r  = get_readings(session_id, limit=10000)
+
+    try:
+        t0 = datetime.fromisoformat(sess["started_at"])
+        t1 = datetime.fromisoformat(sess["ended_at"]) if sess.get("ended_at") else datetime.now()
+        dur_min = (t1 - t0).total_seconds() / 60
+    except Exception:
+        dur_min = 0
+    summ["duration_min"] = dur_min
+
+    p_summaries: dict[int, dict] = {}
+    p_readings:  dict[int, list] = {}
+    for p in parts:
+        pr = get_readings(session_id, p["id"], limit=10000)
+        p_readings[p["id"]] = list(reversed(pr))
+        if pr:
+            sts = [r["stress"]  for r in pr]
+            vls = [r["valence"] for r in pr]
+            cnt = Counter(r["emotion"] for r in pr)
+            sec_cnt: Counter = Counter()
+            for r in pr:
+                probs = r.get("probs") or []
+                if isinstance(probs, str):
+                    try: probs = _json.loads(probs)
+                    except: probs = []
+                if probs:
+                    top_idx = max(range(len(probs)), key=lambda i: probs[i])
+                    for i, pv in enumerate(probs):
+                        if i != top_idx and pv >= 0.15 and i < len(EMOTIONS):
+                            sec_cnt[EMOTIONS[i]] += 1
+            p_summaries[p["id"]] = {
+                "dominant_emotion": cnt.most_common(1)[0][0],
+                "emotion_counts":   dict(cnt),
+                "secondary_counts": dict(sec_cnt),
+                "mean_stress":      sum(sts) / len(sts),
+                "mean_valence":     sum(vls) / len(vls),
+                "high_stress_pct":  sum(s > 0.7 for s in sts) / len(sts) * 100,
+                "readings":         len(pr),
+                "stresses":         sts,
+            }
+
+    S = _styles()
+    w_page, h_page = A4
+    margin    = 15 * mm
+    content_w = w_page - 2 * margin
+    cw5       = content_w / 5
+
+    doc = BaseDocTemplate(
+        out_path, pagesize=A4,
+        leftMargin=margin, rightMargin=margin,
+        topMargin=26*mm, bottomMargin=15*mm,
+    )
+    frame = Frame(margin, 15*mm, content_w, h_page - 41*mm, id="main")
+    doc.addPageTemplates([PageTemplate(id="bg", frames=[frame], onPage=_add_multi_page_bg)])
+
+    story = []
+    story += [
+        Spacer(1, 4*mm),
+        Paragraph("Multi-Emotion Intelligence Report", S["label"]),
+        Paragraph(sess["name"], S["title"]),
+        HRFlowable(width="100%", thickness=0.5, color=PURPLE, spaceAfter=4),
+    ]
+
+    cell_w = content_w / 6
+    def _mc(k, v):
+        return Table([[Paragraph(k, S["kv_key"])], [Paragraph(v, S["kv_val"])]],
+                     colWidths=[cell_w - 4])
+    meta = [
+        ("Location",     sess.get("location") or "\u2014"),
+        ("Date",         t0.strftime("%d %b %Y") if dur_min else "\u2014"),
+        ("Start Time",   t0.strftime("%H:%M")    if dur_min else "\u2014"),
+        ("Duration",     f"{dur_min:.0f} min"),
+        ("Participants", str(len(parts))),
+        ("Readings",     str(summ.get("total_readings", 0))),
+    ]
+    meta_row = Table([[_mc(k, v) for k, v in meta]], colWidths=[cell_w] * 6)
+    meta_row.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), CARD), ("BOX", (0,0), (-1,-1), 0.5, BORDER),
+        ("LINEAFTER", (0,0), (-2,-1), 0.3, BORDER),
+        ("TOPPADDING", (0,0), (-1,-1), 5), ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING", (0,0), (-1,-1), 5), ("RIGHTPADDING", (0,0), (-1,-1), 5),
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+    ]))
+    story += [meta_row, Spacer(1, 4*mm)]
+
+    dom_emo = summ.get("dominant_emotion", "\u2014")
+    ms  = summ.get("mean_stress", 0)
+    mv  = summ.get("mean_valence", 0)
+    hsp = summ.get("high_stress_pct", 0)
+    sl, sc = _stress_label(ms)
+    stat_row = Table([[
+        _stat_card("Dominant Emotion", dom_emo, PURPLE, cw5 - 3),
+        _stat_card("Mean Stress", f"{ms:.0%}", sc, cw5 - 3),
+        _stat_card("High-Stress %", f"{hsp:.0f}%", RED if hsp > 30 else MUTED, cw5 - 3),
+        _stat_card("Mean Valence", f"{mv:+.2f}", GREEN if mv > 0 else RED, cw5 - 3),
+        _stat_card("Stress Level", sl, sc, cw5 - 3),
+    ]], colWidths=[cw5] * 5)
+    stat_row.setStyle(TableStyle([
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("LEFTPADDING", (0,0), (-1,-1), 2), ("RIGHTPADDING", (0,0), (-1,-1), 2),
+        ("TOPPADDING", (0,0), (-1,-1), 0), ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+    ]))
+    story += [stat_row, Spacer(1, 5*mm)]
+
+    story.append(Paragraph("Meeting Review", S["section"]))
+    story.append(_build_review_table(summ, parts, p_summaries, S, content_w))
+    story.append(Spacer(1, 5*mm))
+
+    story.append(Paragraph("Primary Emotion Distribution", S["section"]))
+    all_counts = Counter(r["emotion"] for r in all_r)
+    if all_counts:
+        story.append(EmotionBars(all_counts, width=content_w))
+    story.append(Spacer(1, 5*mm))
+
+    story.append(Paragraph("Secondary Emotion Co-occurrence", S["section"]))
+    story.append(Paragraph(
+        "Emotions detected as secondary (probability \u2265 15%) alongside the primary emotion:",
+        ParagraphStyle("note", fontSize=7.5, textColor=MUTED, leading=11, spaceAfter=4)))
+    sec_all: Counter = Counter()
+    for r in all_r:
+        probs = r.get("probs") or []
+        if isinstance(probs, str):
+            try: probs = _json.loads(probs)
+            except: probs = []
+        if probs:
+            top_idx = max(range(len(probs)), key=lambda i: probs[i])
+            for i, pv in enumerate(probs):
+                if i != top_idx and pv >= 0.15 and i < len(EMOTIONS):
+                    sec_all[EMOTIONS[i]] += 1
+    story.append(SecondaryBars(dict(sec_all), len(all_r), content_w))
+    story.append(Spacer(1, 5*mm))
+
+    story.append(Paragraph("Stress Timeline", S["section"]))
+    all_stresses = [r["stress"] for r in reversed(all_r)]
+    if all_stresses:
+        story.append(StressTimeline(all_stresses, width=content_w, height=40*mm))
+    story.append(Spacer(1, 5*mm))
+
+    if alerts:
+        story.append(Paragraph(f"Stress Alerts  ({len(alerts)})", S["section"]))
+        p_names = {p["id"]: p["name"] for p in parts}
+        alert_rows = [[Paragraph("Time", S["label"]), Paragraph("Participant", S["label"]),
+                       Paragraph("Message", S["label"])]]
+        for a in alerts[:20]:
+            ts = a["timestamp"][:19].replace("T", "  ")
+            alert_rows.append([Paragraph(ts, S["body_sm"]),
+                                Paragraph(p_names.get(a["participant_id"], "Group"), S["body_sm"]),
+                                Paragraph(a["message"], S["body_sm"])])
+        at = Table(alert_rows, colWidths=[38*mm, 38*mm, content_w - 76*mm])
+        at.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1, 0), CARD),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.transparent, CARD]),
+            ("BOX", (0,0), (-1,-1), 0.5, BORDER), ("LINEBELOW", (0,0), (-1,-1), 0.3, BORDER),
+            ("LINEBEFORE", (0,0), (0,-1), 2.5, RED),
+            ("TOPPADDING", (0,0), (-1,-1), 4), ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+            ("LEFTPADDING", (0,0), (-1,-1), 6),
+        ]))
+        story += [at, Spacer(1, 5*mm)]
+
+    if parts:
+        story += [PageBreak(), Paragraph("Individual Analysis — Multi-Emotion", S["section"]),
+                  HRFlowable(width="100%", thickness=0.5, color=PURPLE, spaceAfter=5)]
+
+    for p in parts:
+        ps = p_summaries.get(p["id"])
+        pr = p_readings.get(p["id"], [])
+        pdom = ps["dominant_emotion"] if ps else "\u2014"
+        pms  = ps["mean_stress"]      if ps else 0.0
+        pmv  = ps["mean_valence"]     if ps else 0.0
+        phsp = ps["high_stress_pct"]  if ps else 0.0
+        psl, psc = _stress_label(pms)
+        pei = EMOTIONS.index(pdom) if pdom in EMOTIONS else 0
+
+        name_band = Table(
+            [[Paragraph(p["name"], S["p_name"]),
+              Paragraph((p.get("role") or "Participant") +
+                        (f"  \u00b7  {p.get('department','')}" if p.get("department") else ""),
+                        ParagraphStyle("prole", fontSize=7.5, textColor=MUTED,
+                                       leading=10, alignment=TA_RIGHT))]],
+            colWidths=[content_w * 0.6, content_w * 0.4])
+        name_band.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,-1), CARD), ("BOX", (0,0), (-1,-1), 0.5, BORDER),
+            ("LINEBEFORE", (0,0), (0,-1), 3, EMO_COLORS[pei]),
+            ("TOPPADDING", (0,0), (-1,-1), 5), ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+            ("LEFTPADDING", (0,0), (0,-1), 8), ("RIGHTPADDING", (1,0), (1,-1), 8),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ]))
+        story += [name_band, Spacer(1, 3*mm)]
+
+        if not ps:
+            story.append(Paragraph("No readings recorded for this participant.", S["body_sm"]))
+        else:
+            pstat = Table([[
+                _stat_card("Dominant",    pdom,           EMO_COLORS[pei], cw5 - 3),
+                _stat_card("Mean Stress", f"{pms:.0%}",   psc,             cw5 - 3),
+                _stat_card("High Stress", f"{phsp:.0f}%", RED if phsp > 30 else MUTED, cw5 - 3),
+                _stat_card("Valence",     f"{pmv:+.2f}",  GREEN if pmv > 0 else RED,   cw5 - 3),
+                _stat_card("Readings",    str(ps["readings"]), ACCENT, cw5 - 3),
+            ]], colWidths=[cw5] * 5)
+            pstat.setStyle(TableStyle([
+                ("ALIGN", (0,0), (-1,-1), "CENTER"),
+                ("LEFTPADDING", (0,0), (-1,-1), 2), ("RIGHTPADDING", (0,0), (-1,-1), 2),
+                ("TOPPADDING", (0,0), (-1,-1), 0), ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+            ]))
+            story += [pstat, Spacer(1, 4*mm)]
+
+            if ps.get("secondary_counts"):
+                story.append(Paragraph("Secondary Emotion Co-occurrence", S["section"]))
+                story.append(SecondaryBars(ps["secondary_counts"], ps["readings"], content_w))
+                story.append(Spacer(1, 4*mm))
+
+            if ps["stresses"]:
+                story.append(Paragraph("Stress Timeline", S["section"]))
+                story.append(StressTimeline(ps["stresses"], width=content_w, height=30*mm))
+                story.append(Spacer(1, 4*mm))
+
+            story.append(Paragraph("Primary Emotion Breakdown", S["section"]))
+            story.append(EmotionBars(ps["emotion_counts"], width=content_w))
+            story.append(Spacer(1, 4*mm))
+
+        story.append(HRFlowable(width="100%", thickness=0.3,
+                                color=BORDER, spaceAfter=5, spaceBefore=3))
+
+    doc.build(story)
+
+
+# ── multi-emotion YouTube PDF ─────────────────────────────────────────────────
+def export_yt_pdf_multi(data: dict, out_path: str) -> None:
+    """Multi-emotion variant: includes secondary emotion breakdown in YT PDF."""
+    S = _styles()
+    w_page, h_page = A4
+    margin    = 15 * mm
+    content_w = w_page - 2 * margin
+
+    doc = BaseDocTemplate(
+        out_path, pagesize=A4,
+        leftMargin=margin, rightMargin=margin,
+        topMargin=26*mm, bottomMargin=15*mm,
+    )
+    frame = Frame(margin, 15*mm, content_w, h_page - 41*mm, id="main")
+    doc.addPageTemplates([PageTemplate(id="bg", frames=[frame], onPage=_add_multi_yt_page_bg)])
+
+    story = []
+    title  = data.get("title", "YouTube Video")
+    url    = data.get("url", "")
+    hist   = data.get("history", [])
+    tc     = data.get("teach_count", 0)
+    latest = data.get("latest", {})
+    n_readings = len(hist)
+
+    story += [
+        Spacer(1, 4*mm),
+        Paragraph("Multi-Emotion YouTube Analysis", S["label"]),
+        Paragraph(title[:80] if title else "Video Analysis", S["title"]),
+        HRFlowable(width="100%", thickness=0.5, color=PURPLE, spaceAfter=4),
+    ]
+
+    cell_w = content_w / 4
+    def _mc(k, v):
+        return Table([[Paragraph(k, S["kv_key"])], [Paragraph(v, S["kv_val"])]],
+                     colWidths=[cell_w - 4])
+    meta = [
+        ("Source URL",       url[:55] + ("..." if len(url) > 55 else "") if url else "\u2014"),
+        ("Total Readings",   str(n_readings)),
+        ("Teach Corrections", str(tc)),
+        ("Detection Mode",   "Multi-Emotion"),
+    ]
+    meta_row = Table([[_mc(k, v) for k, v in meta]], colWidths=[cell_w] * 4)
+    meta_row.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), CARD), ("BOX", (0,0), (-1,-1), 0.5, BORDER),
+        ("LINEAFTER", (0,0), (-2,-1), 0.3, BORDER),
+        ("TOPPADDING", (0,0), (-1,-1), 5), ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING", (0,0), (-1,-1), 5), ("RIGHTPADDING", (0,0), (-1,-1), 5),
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+    ]))
+    story += [meta_row, Spacer(1, 5*mm)]
+
+    if hist:
+        emotions  = [h.get("emotion", "Neutral") for h in hist]
+        stresses  = [h.get("stress", 0) for h in hist]
+        valences  = [h.get("valence", 0) for h in hist]
+        arousals  = [h.get("arousal", 0) for h in hist]
+        confs     = [h.get("confidence", 0) for h in hist]
+        dom_emo   = Counter(emotions).most_common(1)[0][0]
+        ms  = sum(stresses) / len(stresses)
+        mv  = sum(valences) / len(valences)
+        ma  = sum(arousals) / len(arousals)
+        mc  = sum(confs) / len(confs)
+        sl, sc = _stress_label(ms)
+        sec_all: Counter = Counter()
+        for h in hist:
+            for s in (h.get("secondary") or []):
+                sec_all[s] += 1
+    else:
+        dom_emo = latest.get("emotion", "Neutral") if latest else "Neutral"
+        ms = mv = ma = mc = 0; sl, sc = _stress_label(0)
+        stresses = []; emotions = [dom_emo]; sec_all = Counter()
+
+    cw5 = content_w / 5
+    stat_row = Table([[
+        _stat_card("Dominant",     dom_emo,    PURPLE,              cw5 - 3),
+        _stat_card("Mean Stress",  f"{ms:.0%}", sc,                 cw5 - 3),
+        _stat_card("Mean Valence", f"{mv:+.2f}", GREEN if mv > 0 else RED, cw5 - 3),
+        _stat_card("Mean Arousal", f"{ma:.2f}", YELLOW,             cw5 - 3),
+        _stat_card("Mean Conf.",   f"{mc:.0%}", ACCENT,             cw5 - 3),
+    ]], colWidths=[cw5] * 5)
+    stat_row.setStyle(TableStyle([
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("LEFTPADDING", (0,0), (-1,-1), 2), ("RIGHTPADDING", (0,0), (-1,-1), 2),
+        ("TOPPADDING", (0,0), (-1,-1), 0), ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+    ]))
+    story += [stat_row, Spacer(1, 5*mm)]
+
+    story.append(Paragraph("Analysis Summary", S["section"]))
+    bp = ParagraphStyle("bp", fontSize=8.5, textColor=TEXT, leading=13)
+    n_with_sec = sum(1 for h in hist if h.get("secondary"))
+    top_sec = sec_all.most_common(1)[0][0] if sec_all else "none"
+    summary_text = (
+        f"Multi-emotion analysis of <b>{n_readings}</b> readings.  "
+        f"Dominant primary emotion: <b>{dom_emo}</b> (confidence {mc:.0%}).  "
+        f"Mean stress <b>{ms:.0%}</b> ({sl}).  "
+        f"Secondary emotions co-detected in <b>{n_with_sec}</b> of {n_readings} readings.  "
+        f"Most frequent secondary: <b>{top_sec}</b>.  "
+        f"Manual teach corrections: <b>{tc}</b>."
+    )
+    summary_tbl = Table(
+        [[Paragraph("\u25b8", ParagraphStyle("ic2", fontSize=9, textColor=PURPLE,
+                                             alignment=TA_CENTER)),
+          Paragraph(summary_text, bp)]],
+        colWidths=[6*mm, content_w - 6*mm])
+    summary_tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), CARD), ("BOX", (0,0), (-1,-1), 0.5, BORDER),
+        ("LINEBEFORE", (0,0), (0,-1), 2.5, PURPLE),
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+        ("TOPPADDING", (0,0), (-1,-1), 6), ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+        ("LEFTPADDING", (0,0), (0,-1), 5), ("LEFTPADDING", (1,0), (1,-1), 4),
+        ("RIGHTPADDING", (0,0), (-1,-1), 8),
+    ]))
+    story += [summary_tbl, Spacer(1, 5*mm)]
+
+    story.append(Paragraph("Primary Emotion Distribution", S["section"]))
+    if Counter(emotions):
+        story.append(EmotionBars(Counter(emotions), width=content_w))
+    story.append(Spacer(1, 5*mm))
+
+    story.append(Paragraph("Secondary Emotion Co-occurrence", S["section"]))
+    story.append(Paragraph(
+        "Emotions detected simultaneously via sigmoid \u2265 0.30 alongside the primary emotion:",
+        ParagraphStyle("note", fontSize=7.5, textColor=MUTED, leading=11, spaceAfter=4)))
+    story.append(SecondaryBars(dict(sec_all), n_readings, content_w))
+    story.append(Spacer(1, 5*mm))
+
+    if stresses:
+        story.append(Paragraph("Stress Timeline", S["section"]))
+        story.append(StressTimeline(stresses, width=content_w, height=40*mm))
+        story.append(Spacer(1, 5*mm))
+
+    if hist:
+        story.append(Paragraph("Readings — Primary + Secondary  (last 20)", S["section"]))
+        rr_rows = [[
+            Paragraph("Time",    S["label"]),
+            Paragraph("Primary", S["label"]),
+            Paragraph("Secondary Emotions", S["label"]),
+            Paragraph("Stress",  S["label"]),
+            Paragraph("Conf.",   S["label"]),
+        ]]
+        for r in hist[-20:]:
+            ts2 = (r.get("timestamp") or "")[-8:-3] if r.get("timestamp") else "--"
+            sl2, sc2 = _stress_label(r.get("stress", 0))
+            sec_str = ", ".join(r.get("secondary") or []) or "\u2014"
+            rr_rows.append([
+                Paragraph(ts2,                   S["body_sm"]),
+                Paragraph(r.get("emotion","--"), S["body_sm"]),
+                Paragraph(sec_str, ParagraphStyle("sec", fontSize=7, textColor=PURPLE, leading=10)),
+                Paragraph(f"{r.get('stress',0):.0%}",
+                          ParagraphStyle("sv2", fontSize=7.5, textColor=sc2)),
+                Paragraph(f"{r.get('confidence',0):.0%}", S["body_sm"]),
+            ])
+        col_widths = [18*mm, 32*mm, content_w - 18*mm - 32*mm - 20*mm - 18*mm, 20*mm, 18*mm]
+        rrt = Table(rr_rows, colWidths=col_widths)
+        rrt.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0), (-1, 0), CARD),
+            ("ROWBACKGROUNDS",(0,1), (-1,-1), [colors.transparent, CARD]),
+            ("BOX",           (0,0), (-1,-1), 0.5, BORDER),
+            ("LINEBELOW",     (0,0), (-1,-1), 0.3, BORDER),
+            ("TOPPADDING",    (0,0), (-1,-1), 3),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 3),
+            ("LEFTPADDING",   (0,0), (-1,-1), 5),
+        ]))
+        story += [rrt, Spacer(1, 5*mm)]
+
+    doc.build(story)
