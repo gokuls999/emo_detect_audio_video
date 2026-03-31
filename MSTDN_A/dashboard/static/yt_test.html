@@ -234,6 +234,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
       Report
     </button>
     <a id="yt-mode-switch" href="/yt_test/multi" style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:6px;background:var(--accent-bg);color:var(--accent);font-weight:600;font-size:13px;text-decoration:none">◈ Multi Mode</a>
+    <button class="btn-pdf" onclick="showHistory()" title="View session history" id="history-nav-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History <span id="history-nav-count" style="font-size:11px;color:var(--text-muted);font-weight:400"></span>
+    </button>
     <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
       <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
       <svg id="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -664,8 +668,13 @@ function switchYTTab(btn, targetId){
   document.querySelectorAll('.yt-tab-content').forEach(c=>c.classList.remove('active'));
   const target=document.getElementById(targetId);
   if(target) target.classList.add('active');
-  // fetch history when switching to history tab
   if(targetId==='yt-tab-history') fetchHistory();
+}
+
+function showHistory(){
+  // click the History tab button programmatically
+  const histBtn=document.querySelector('.yt-tab-btn:last-child');
+  if(histBtn) switchYTTab(histBtn,'yt-tab-history');
 }
 
 // ── history panel ──────────────────────────────────────────────────────────────
@@ -706,11 +715,13 @@ function fetchHistory(){
 // Poll history count badge every 5s, full render only when tab is visible
 setInterval(()=>{
   fetch('/api/yt/history?limit=60').then(r=>r.json()).then(d=>{
-    document.getElementById('history-badge').textContent = '(' + (d.total||0) + ')';
-    document.getElementById('history-count').textContent = (d.total||0) + ' readings';
-    // only render rows if history tab is active
+    const total = d.total||0;
+    document.getElementById('history-badge').textContent = '(' + total + ')';
+    document.getElementById('history-count').textContent = total + ' readings';
+    const navCount = document.getElementById('history-nav-count');
+    if(navCount) navCount.textContent = total > 0 ? '(' + total + ')' : '';
     if(document.getElementById('yt-tab-history').classList.contains('active')){
-      renderHistory(d.history||[], d.total||0);
+      renderHistory(d.history||[], total);
     }
   }).catch(()=>{});
 }, 5000);
