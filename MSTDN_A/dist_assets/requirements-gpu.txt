@@ -1,0 +1,39 @@
+# MSTDN-A GPU Requirements
+# PyTorch CUDA is installed separately by setup.bat
+
+# Audio processing
+librosa>=0.10.0
+soundfile>=0.12.0
+praat-parselmouth>=0.4.3
+
+# Web server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+
+# Face detection (InsightFace + ONNX GPU)
+insightface>=0.7.3
+onnxruntime-gpu>=1.16.0
+
+# Data / Science
+numpy>=1.24.0
+scipy>=1.11.0
+
+# YouTube audio extraction
+yt-dlp>=2024.1.0
+
+# FFmpeg wrapper (bundles ffmpeg binary)
+imageio-ffmpeg>=0.4.9
+
+# Transformers (wav2vec2 backbone)
+transformers>=4.37.0
+
+# PDF reports
+reportlab>=4.0.0
+
+# Misc
+einops>=0.7.0
+rotary-embedding-torch
+tqdm>=4.65.0

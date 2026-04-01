@@ -34,7 +34,7 @@ html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;transition:background .2s,color .2s}
 
 /* top nav */
-.topnav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topnav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 14px;height:40px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .topnav-left{display:flex;align-items:center;gap:14px}
 .topnav-right{display:flex;align-items:center;gap:12px}
 .logo{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.3px}
@@ -50,19 +50,19 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .back-link:hover{text-decoration:underline}
 .theme-toggle{background:var(--bg-hover);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--text-sec);display:flex;align-items:center;transition:all .15s}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.btn-pdf{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .15s}
+.btn-pdf{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;transition:all .15s}
 .btn-pdf:hover{border-color:var(--accent);color:var(--accent)}
 
-/* url bar */
-.url-bar{display:flex;gap:8px;padding:8px 24px;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0}
-.url-input{flex:1;padding:10px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;outline:none;transition:border .2s}
+/* url bar — compact */
+.url-bar{display:flex;gap:4px;padding:4px 14px;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0}
+.url-input{flex:1;padding:5px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;transition:border .2s}
 .url-input:focus{border-color:var(--accent)}
 .url-input::placeholder{color:var(--text-muted)}
-.btn{padding:9px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .12s;display:inline-flex;align-items:center;gap:6px}
+.btn{padding:5px 10px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .12s;display:inline-flex;align-items:center;gap:4px}
 .btn:hover{opacity:.9}
 .btn-load{background:var(--accent);color:#fff}
 .btn-stop{background:var(--danger);color:#fff}
-.btn-mute{background:var(--bg-hover);color:var(--text-inv);border:1px solid var(--border);min-width:110px}
+.btn-mute{background:var(--bg-hover);color:var(--text-inv);border:1px solid var(--border);min-width:70px}
 .btn-mute.muted{background:var(--purple);color:#fff;border-color:var(--purple)}
 
 /* main */
@@ -150,9 +150,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .teach-title{font-size:12px;font-weight:600;color:var(--text-inv);letter-spacing:.3px}
 .teach-count{font-size:11px;color:var(--accent);font-weight:600}
 
-/* auto-learn badge dot */
-.auto-badge-dot{width:7px;height:7px;border-radius:50%;background:#16a34a;animation:blink 1s infinite;flex-shrink:0}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+/* auto-learn (no longer uses badge dot) */
 .teach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 .teach-btn{padding:5px 4px 6px;border-radius:7px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-inv);cursor:pointer;font-size:11px;font-weight:600;transition:all .12s;text-align:center;line-height:1.2}
 .teach-btn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
@@ -171,7 +169,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .btn-clear:hover{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
 
 /* blend bar */
-.blend-bar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:6px 24px;display:flex;align-items:center;gap:18px;flex-shrink:0;height:42px}
+.blend-bar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:3px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;height:30px}
 .blend-label{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
 .blend-slider{display:flex;align-items:center;gap:8px;flex:1}
 .blend-slider label{font-size:14px;color:var(--text-sec);font-weight:500;white-space:nowrap;min-width:90px}
@@ -188,19 +186,27 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .yt-tab-content{display:none;flex:1;overflow-y:auto;min-height:0}
 .yt-tab-content.active{display:flex;flex-direction:column}
 /* history items */
-.history-list{overflow-y:auto;flex:1;padding:4px 8px}
+.history-list{overflow-y:auto;flex:1;padding:8px 12px}
 .history-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .history-title{font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.4px}
 .history-count{font-size:11px;color:var(--text-muted)}
-.history-item{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border-light);font-size:11px}
-.history-item:last-child{border:none}
-.history-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.history-emo{font-weight:600;color:var(--text);min-width:80px}
-.history-conf{color:var(--text-muted);min-width:36px}
-.history-stress{min-width:40px}
-.history-chips{display:flex;flex-wrap:wrap;gap:2px;flex:1}
-.history-chip{padding:0 5px;border-radius:8px;font-size:9px;font-weight:600;background:var(--bg-hover);color:var(--text-sec);border:1px solid var(--border)}
-.history-time{color:var(--text-muted);font-size:9px;margin-left:auto;white-space:nowrap}
+.pdf-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border-light);border-radius:8px;margin-bottom:6px;background:var(--bg-input);transition:border-color .15s}
+.pdf-item:hover{border-color:var(--accent)}
+.pdf-icon{width:28px;height:28px;flex-shrink:0;color:var(--accent)}
+.pdf-info{flex:1;min-width:0}
+.pdf-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-meta{font-size:10px;color:var(--text-muted)}
+.pdf-mode-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase}
+.pdf-mode-tag.single{background:#dbeafe;color:#2563eb}
+.pdf-mode-tag.multi{background:#ede9fe;color:#7c3aed}
+[data-theme="dark"] .pdf-mode-tag.single{background:#1e3a5f;color:#60a5fa}
+[data-theme="dark"] .pdf-mode-tag.multi{background:#312e81;color:#a78bfa}
+.pdf-actions{display:flex;gap:4px;flex-shrink:0}
+.pdf-actions button{padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-sec);cursor:pointer;font-size:11px;font-weight:600;transition:all .12s}
+.pdf-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.pdf-actions .btn-del:hover{border-color:var(--danger);color:var(--danger)}
+.btn-clear-all{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);cursor:pointer;font-size:10px;font-weight:600;transition:all .12s}
+.btn-clear-all:hover{border-color:var(--danger);color:var(--danger)}
 /* secondary emotion chips */
 .secondary-row{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px;min-height:14px}
 .multi-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:var(--bg-hover);color:var(--text-sec);border:1px solid var(--border)}
@@ -234,9 +240,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
       Report
     </button>
     <a id="yt-mode-switch" href="/yt_test/multi" style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:6px;background:var(--accent-bg);color:var(--accent);font-weight:600;font-size:13px;text-decoration:none">◈ Multi Mode</a>
-    <button class="btn-pdf" onclick="showHistory()" title="View session history" id="history-nav-btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History <span id="history-nav-count" style="font-size:11px;color:var(--text-muted);font-weight:400"></span>
+    <button class="btn-pdf" onclick="showHistory()" title="View PDF history" id="history-nav-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+      PDF History <span id="history-nav-count" style="font-size:11px;color:var(--text-muted);font-weight:400"></span>
     </button>
     <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
       <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
@@ -262,6 +268,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 <div class="url-bar">
   <input class="url-input" id="yt-url" type="text" placeholder="Paste a YouTube URL..." />
   <button class="btn btn-load" onclick="loadVideo()">Load</button>
+  <button class="btn" style="background:var(--purple);color:#fff" onclick="document.getElementById('local-file').click()">Local</button>
+  <input type="file" id="local-file" accept="video/*" style="display:none" onchange="loadLocalVideo(this)">
   <button class="btn btn-stop" onclick="stopVideo()">Stop</button>
   <button class="btn btn-mute" id="mute-btn" onclick="toggleMute()">Mute</button>
 </div>
@@ -272,10 +280,13 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
   <div class="left-col">
     <div class="yt-placeholder" id="yt-placeholder">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      <p>Paste a YouTube URL above and click Load</p>
+      <p>Paste a YouTube URL or click Local Video</p>
     </div>
     <div id="yt-frame-wrap">
       <iframe id="yt-iframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    </div>
+    <div id="local-video-wrap" style="flex:1;min-height:0;border-radius:12px;overflow:hidden;border:1px solid var(--border);display:none">
+      <video id="local-player" style="width:100%;height:100%;display:block;background:#000" controls autoplay></video>
     </div>
     <div class="yt-meta">
       <div class="yt-title" id="yt-title"></div>
@@ -300,7 +311,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
       <div class="analysis-accent" id="emo-accent"></div>
       <div class="yt-tab-bar">
         <button class="yt-tab-btn active" onclick="switchYTTab(this,'yt-tab-analysis')">&#128200; Analysis</button>
-        <button class="yt-tab-btn" onclick="switchYTTab(this,'yt-tab-history')">&#9201; History <span id="history-badge" style="font-size:10px;color:var(--text-muted);font-weight:400">(0)</span></button>
+        <button class="yt-tab-btn" onclick="switchYTTab(this,'yt-tab-history')">&#128196; PDF History <span id="history-badge" style="font-size:10px;color:var(--text-muted);font-weight:400">(0)</span></button>
       </div>
       <div class="yt-tab-content active" id="yt-tab-analysis">
       <div class="analysis-body">
@@ -340,12 +351,13 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
               <button class="btn-clear" onclick="clearTeach()" title="Reset corrections">Clear</button>
             </div>
           </div>
-          <!-- auto-learn live status strip -->
+          <!-- auto-learn toggle strip -->
           <div id="auto-strip" style="display:flex;align-items:center;justify-content:space-between;background:var(--auto-bg);border:1px solid var(--auto-border);border-radius:8px;padding:5px 10px;margin-bottom:6px;font-size:12px;color:var(--auto-text)">
             <div style="display:flex;align-items:center;gap:6px">
-              <span class="auto-badge-dot" style="display:inline-block"></span>
-              <span style="font-weight:700">Auto Learn</span>
-              <span style="color:var(--auto-sub);font-weight:400">— runs in background while video plays</span>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:700;margin:0">
+                <input type="checkbox" id="yt-auto-learn" onchange="toggleYTAutoLearn(this.checked)" style="width:14px;height:14px;accent-color:var(--accent)"> Auto-Learn
+              </label>
+              <span id="yt-auto-status" style="color:var(--auto-sub);font-weight:400">Off</span>
             </div>
             <span id="auto-last" style="color:var(--auto-val);font-style:italic"></span>
           </div>
@@ -371,11 +383,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 
       <div class="yt-tab-content" id="yt-tab-history" style="padding:0">
         <div class="history-hdr">
-          <div class="history-title">&#9201; Session History</div>
-          <span class="history-count" id="history-count">0 readings</span>
+          <div class="history-title">&#128196; PDF Reports</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="history-count" id="history-count">0 reports</span>
+            <button class="btn-clear-all" onclick="clearAllPDFs()" title="Delete all reports">Clear All</button>
+          </div>
         </div>
-        <div class="history-list" id="history-list" style="padding:8px 12px">
-          <div style="padding:8px 0;font-size:12px;color:var(--text-muted);text-align:center">No readings yet — load a video to start.</div>
+        <div class="history-list" id="history-list">
+          <div style="padding:16px 0;font-size:12px;color:var(--text-muted);text-align:center">No PDF reports yet — generate one using the Report button.</div>
         </div>
       </div><!-- /yt-tab-history -->
 
@@ -508,15 +523,58 @@ function updateUI(d){
 function setMode(m){const p=document.getElementById('mode-pill');p.className='mode-pill mode-'+m;p.textContent=m==='face'?'Face':m==='audio'?'Audio':m==='audioface'?'Audio+Face':'Idle';}
 function setSourceTag(m){const t=document.getElementById('source-tag');t.className='wave-tag tag-'+(m==='audioface'?'audio':m);t.textContent=m==='audio'?'Audio':m==='face'?'Face':m==='audioface'?'Audio+Face':'Idle';}
 
+let _isLocalVideo = false;
+
 function loadVideo(){
   const url=document.getElementById('yt-url').value.trim();if(!url){alert('Paste a YouTube URL first');return;}
   document.getElementById('emo-name').textContent='Loading...';waveHistory=new Array(WAVE_HIST).fill(0);drawWave();
+  _isLocalVideo = false;
   fetch('/api/yt/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})})
   .then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();})
-  .then(d=>{if(d.video_id){document.getElementById('yt-placeholder').style.display='none';document.getElementById('yt-frame-wrap').style.display='block';document.getElementById('yt-iframe').src=`https://www.youtube.com/embed/${d.video_id}?autoplay=1&enablejsapi=1`;document.getElementById('yt-title').textContent=d.title||'';setStatus('live');setMode('audio');setSourceTag('audio');}})
+  .then(d=>{if(d.video_id){document.getElementById('yt-placeholder').style.display='none';document.getElementById('local-video-wrap').style.display='none';document.getElementById('yt-frame-wrap').style.display='block';document.getElementById('yt-iframe').src=`https://www.youtube.com/embed/${d.video_id}?autoplay=1&enablejsapi=1`;document.getElementById('yt-title').textContent=d.title||'';setStatus('live');setMode('audio');setSourceTag('audio');}})
   .catch(e=>{alert('Error: '+(e.detail||JSON.stringify(e)));document.getElementById('emo-name').textContent='Error';});
 }
-function stopVideo(){fetch('/api/yt/stop',{method:'POST'});document.getElementById('yt-iframe').src='';document.getElementById('yt-frame-wrap').style.display='none';document.getElementById('yt-placeholder').style.display='flex';document.getElementById('yt-title').textContent='';setStatus('idle');setMode('idle');setSourceTag('idle');document.getElementById('emo-name').textContent='Waiting...';muted=false;document.getElementById('mute-btn').textContent='Mute';document.getElementById('mute-btn').classList.remove('muted');waveHistory=new Array(WAVE_HIST).fill(0);drawWave();}
+
+function loadLocalVideo(input){
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('emo-name').textContent='Uploading...';
+  waveHistory=new Array(WAVE_HIST).fill(0);drawWave();
+  const form = new FormData();
+  form.append('file', file);
+  fetch('/api/yt/load_local',{method:'POST', body: form})
+  .then(r=>{if(!r.ok)return r.json().then(e=>{throw e});return r.json();})
+  .then(d=>{
+    _isLocalVideo = true;
+    document.getElementById('yt-placeholder').style.display='none';
+    document.getElementById('yt-frame-wrap').style.display='none';
+    document.getElementById('local-video-wrap').style.display='block';
+    const player = document.getElementById('local-player');
+    player.src = '/api/yt/local_video/' + d.filename;
+    player.play().catch(()=>{});
+    document.getElementById('yt-title').textContent = d.title || file.name;
+    setStatus('live'); setMode('audio'); setSourceTag('audio');
+  })
+  .catch(e=>{alert('Error: '+(e.detail||JSON.stringify(e)));document.getElementById('emo-name').textContent='Error';});
+  input.value = '';  // reset so same file can be re-selected
+}
+
+function stopVideo(){
+  fetch('/api/yt/stop',{method:'POST'});
+  document.getElementById('yt-iframe').src='';
+  document.getElementById('yt-frame-wrap').style.display='none';
+  document.getElementById('local-video-wrap').style.display='none';
+  const player = document.getElementById('local-player');
+  if(player){player.pause();player.src='';}
+  _isLocalVideo = false;
+  document.getElementById('yt-placeholder').style.display='flex';
+  document.getElementById('yt-title').textContent='';
+  setStatus('idle');setMode('idle');setSourceTag('idle');
+  document.getElementById('emo-name').textContent='Waiting...';
+  muted=false;document.getElementById('mute-btn').textContent='Mute';
+  document.getElementById('mute-btn').classList.remove('muted');
+  waveHistory=new Array(WAVE_HIST).fill(0);drawWave();
+}
 function toggleMute(){muted=!muted;const b=document.getElementById('mute-btn');b.textContent=muted?'Unmute':'Mute';b.classList.toggle('muted',muted);const f=document.getElementById('yt-iframe');if(f&&f.contentWindow)f.contentWindow.postMessage(JSON.stringify({event:'command',func:muted?'mute':'unMute',args:''}),'*');fetch('/api/yt/mute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({muted})});}
 
 connectWS();drawWave();
@@ -574,6 +632,8 @@ const YT_MODE = location.pathname.includes('/multi') ? 'multi' : 'single';
 // ── PDF download (mode-aware) ───────────────────────────────────────────────────
 function downloadYTPDF(){
   window.open('/api/yt/report?mode=' + YT_MODE);
+  // Refresh PDF history after a short delay (PDF generation takes a moment)
+  setTimeout(fetchPDFHistory, 2000);
 }
 
 // ── multi-teach state ───────────────────────────────────────────────────────────
@@ -623,7 +683,27 @@ EMOTIONS.forEach((emo,idx)=>{
   ytMGrid.appendChild(btn);
 });
 function teachSave(){fetch('/api/yt/teach/save',{method:'POST'}).then(r=>r.json()).then(d=>{document.getElementById('teach-feedback').textContent='Saved ('+d.teach_count+' steps)';});}
-setInterval(()=>{fetch('/api/yt/teach/status').then(r=>r.json()).then(d=>{document.getElementById('teach-buffer').textContent=d.buffer_size;document.getElementById('teach-count').textContent=d.teach_count+' corrections';}).catch(()=>{});},3000);
+
+function toggleYTAutoLearn(enabled){
+  fetch('/api/yt/auto_learn',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({enabled})})
+  .then(r=>r.json()).then(d=>{
+    const s=document.getElementById('yt-auto-status');
+    s.textContent=d.auto_learn?'On — auto teaching':'Off';
+    s.style.color=d.auto_learn?'var(--success)':'var(--auto-sub)';
+    document.getElementById('teach-feedback').textContent=
+      d.auto_learn?'Auto-learn ON: model corrects itself when confident':'Auto-learn OFF';
+  });
+}
+
+setInterval(()=>{fetch('/api/yt/teach/status').then(r=>r.json()).then(d=>{
+  document.getElementById('teach-buffer').textContent=d.buffer_size;
+  document.getElementById('teach-count').textContent=d.teach_count+' corrections';
+  const cb=document.getElementById('yt-auto-learn');
+  if(cb) cb.checked=!!d.auto_learn;
+  const s=document.getElementById('yt-auto-status');
+  if(s){s.textContent=d.auto_learn?'On — auto teaching':'Off';s.style.color=d.auto_learn?'var(--success)':'var(--auto-sub)';}
+}).catch(()=>{});},3000);
 
 // ── clear functions ──────────────────────────────────────────────────────────
 function clearTeach(){
@@ -668,7 +748,7 @@ function switchYTTab(btn, targetId){
   document.querySelectorAll('.yt-tab-content').forEach(c=>c.classList.remove('active'));
   const target=document.getElementById(targetId);
   if(target) target.classList.add('active');
-  if(targetId==='yt-tab-history') fetchHistory();
+  if(targetId==='yt-tab-history') fetchPDFHistory();
 }
 
 function showHistory(){
@@ -677,54 +757,70 @@ function showHistory(){
   if(histBtn) switchYTTab(histBtn,'yt-tab-history');
 }
 
-// ── history panel ──────────────────────────────────────────────────────────────
-function renderHistory(items, total){
+// ── PDF history panel ─────────────────────────────────────────────────────────
+const _pdfSvg = '<svg class="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>';
+
+function renderPDFHistory(reports){
   const list = document.getElementById('history-list');
-  document.getElementById('history-count').textContent = total + ' readings';
-  document.getElementById('history-badge').textContent = '(' + total + ')';
-  if(!items.length){
-    list.innerHTML='<div style="padding:8px 0;font-size:12px;color:var(--text-muted);text-align:center">No readings yet — load a video to start.</div>';
+  const count = reports.length;
+  document.getElementById('history-count').textContent = count + ' report' + (count!==1?'s':'');
+  document.getElementById('history-badge').textContent = '(' + count + ')';
+  const navCount = document.getElementById('history-nav-count');
+  if(navCount) navCount.textContent = count > 0 ? '(' + count + ')' : '';
+  if(!count){
+    list.innerHTML='<div style="padding:16px 0;font-size:12px;color:var(--text-muted);text-align:center">No PDF reports yet — generate one using the Report button.</div>';
     return;
   }
-  const rows = [...items].reverse().map(r => {
-    const ei = EMOTIONS.indexOf(r.emotion);
-    const col = ei >= 0 ? BAR_COLORS[ei] : '#888';
-    const stressVal = r.stress != null ? (r.stress*100).toFixed(0)+'%' : '--';
-    const stressColor = r.stress > 0.7 ? '#ef4444' : r.stress > 0.45 ? '#d97706' : '#22c55e';
-    const sec = (r.secondary||[]);
-    const chips = YT_MODE === 'multi' && sec.length
-      ? sec.map(n=>`<span class="history-chip">${n}</span>`).join('')
-      : '';
-    return `<div class="history-item">
-      <span class="history-dot" style="background:${col}"></span>
-      <span class="history-emo">${r.emotion||'--'}</span>
-      <span class="history-conf">${r.confidence!=null?(r.confidence*100).toFixed(0)+'%':'--'}</span>
-      <span class="history-stress" style="color:${stressColor};font-weight:600">${stressVal}</span>
-      ${chips ? `<span class="history-chips">${chips}</span>` : ''}
+  list.innerHTML = reports.map(r => {
+    const d = new Date(r.created);
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const title = r.title || 'Untitled';
+    const modeTag = r.mode === 'multi'
+      ? '<span class="pdf-mode-tag multi">Multi</span>'
+      : '<span class="pdf-mode-tag single">Single</span>';
+    return `<div class="pdf-item">
+      ${_pdfSvg}
+      <div class="pdf-info">
+        <div class="pdf-name">${modeTag} ${title.replace(/</g,'&lt;')}</div>
+        <div class="pdf-meta">${dateStr} &bull; ${r.readings||'--'} readings &bull; ${r.dominant||'--'} dominant</div>
+      </div>
+      <div class="pdf-actions">
+        <button onclick="window.open('/api/yt/pdf_history/${r.filename}')" title="Download">Open</button>
+        <button class="btn-del" onclick="deletePDF('${r.filename}')" title="Delete">Del</button>
+      </div>
     </div>`;
-  });
-  list.innerHTML = rows.join('');
+  }).join('');
 }
 
-function fetchHistory(){
-  fetch('/api/yt/history?limit=60').then(r=>r.json()).then(d=>{
-    renderHistory(d.history||[], d.total||0);
+function fetchPDFHistory(){
+  const mode = YT_MODE;
+  fetch('/api/yt/pdf_history?mode=' + mode).then(r=>r.json()).then(d=>{
+    renderPDFHistory(d.reports||[]);
   }).catch(()=>{});
 }
 
-// Poll history count badge every 5s, full render only when tab is visible
+function deletePDF(filename){
+  if(!confirm('Delete this PDF report?')) return;
+  fetch('/api/yt/pdf_history/' + filename, {method:'DELETE'}).then(()=>fetchPDFHistory()).catch(()=>{});
+}
+
+function clearAllPDFs(){
+  if(!confirm('Delete ALL PDF reports for this mode? This cannot be undone.')) return;
+  fetch('/api/yt/pdf_history?mode=' + YT_MODE, {method:'DELETE'}).then(()=>fetchPDFHistory()).catch(()=>{});
+}
+
+// Poll PDF count every 10s, full render when tab is visible
 setInterval(()=>{
-  fetch('/api/yt/history?limit=60').then(r=>r.json()).then(d=>{
-    const total = d.total||0;
-    document.getElementById('history-badge').textContent = '(' + total + ')';
-    document.getElementById('history-count').textContent = total + ' readings';
+  fetch('/api/yt/pdf_history?mode=' + YT_MODE).then(r=>r.json()).then(d=>{
+    const count = (d.reports||[]).length;
+    document.getElementById('history-badge').textContent = '(' + count + ')';
     const navCount = document.getElementById('history-nav-count');
-    if(navCount) navCount.textContent = total > 0 ? '(' + total + ')' : '';
+    if(navCount) navCount.textContent = count > 0 ? '(' + count + ')' : '';
     if(document.getElementById('yt-tab-history').classList.contains('active')){
-      renderHistory(d.history||[], total);
+      renderPDFHistory(d.reports||[]);
     }
   }).catch(()=>{});
-}, 5000);
+}, 10000);
 </script>
 </body>
 </html>

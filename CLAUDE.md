@@ -243,6 +243,12 @@ Also removed second forward pass that was computing `new_prediction` after each 
 
 ---
 
+## UI Rules — MUST FOLLOW
+
+- **No scrolling to reach controls.** Distribution bars and teach buttons MUST be visible without scrolling on the YT test page. All headers (topnav, blend bar, URL bar) must be as compact as possible. If adding new UI elements, they must NOT push bars/buttons below the fold.
+- **Buttons must be compact.** Use small padding, short labels. Never enlarge buttons or add tall bars that eat vertical space.
+- **Never change internal settings** (inference, training, model, LR, replay buffer, etc.) when working on UI/PDF/history features. Only touch what was asked.
+
 ## Known Issues
 
 - `secondary_logits` (multi-label emotions) are computed by the model but were not surfaced to UI until multi-emotion feature was added.

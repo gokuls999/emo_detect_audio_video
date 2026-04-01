@@ -24,7 +24,7 @@ import torch
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,14 +60,17 @@ force_transformers_offline()
 from models.student.student_model import MSTDNAStudent
 device = choose_torch_device("cuda")
 _model = MSTDNAStudent().to(device)
-_ckpt  = torch.load(CHECKPOINT, map_location=device, weights_only=False)
+# Prefer online-tuned checkpoint (has user corrections), fall back to base
+_ckpt_path = ONLINE_CKPT if ONLINE_CKPT.exists() else CHECKPOINT
+print(f"Loading checkpoint: {_ckpt_path.name}")
+_ckpt  = torch.load(_ckpt_path, map_location=device, weights_only=False)
 _state = _ckpt.get("model", _ckpt)
 # Allow checkpoint to load even if wav2vec branch is disabled (shape mismatches)
 current = _model.state_dict()
 filtered = {k: v for k, v in _state.items() if k in current and getattr(v, "shape", None) == current[k].shape}
 _model.load_state_dict(filtered, strict=False)
 _model.eval()
-print(f"Model ready on {device}")
+print(f"Model ready on {device}" + (" (online-tuned)" if _ckpt_path == ONLINE_CKPT else " (base)"))
 
 
 def preprocess_audio(raw: np.ndarray) -> tuple:
@@ -142,6 +145,9 @@ class AppState:
     auto_learn:   bool                       = False
     last_auto_teach: float                   = 0.0
     last_secondary: list                     = []   # carry-forward last known secondary emotions
+    # Replay buffer for anti-forgetting (stores past teach corrections)
+    replay_buffer: list                      = []   # list of (embedding, label_idx)
+    multi_replay_buffer: list                = []   # list of (embedding, target_vec)
     # Blend weights (user-adjustable via /api/blend)
     audio_weight: float                      = 0.5
     face_weight:  float                      = 0.5
@@ -617,6 +623,7 @@ def session_alerts_api(sid: int):
 
 @app.get("/api/session/{sid}/export")
 def session_export(sid: int, mode: str = "single"):
+    from datetime import datetime as _dt
     from dashboard.pdf_report import export_pdf, export_pdf_multi
     suffix = "_multi" if mode == "multi" else ""
     path = str(BASE / f"session_{sid}_report{suffix}.pdf")
@@ -624,8 +631,79 @@ def session_export(sid: int, mode: str = "single"):
         export_pdf_multi(sid, path)
     else:
         export_pdf(sid, path)
+
+    # Save a copy in dash_pdf_reports for history
+    stamp = _dt.now().strftime("%Y%m%d_%H%M%S")
+    fname = f"dash_{mode}_session{sid}_{stamp}.pdf"
+    import shutil
+    dest = _DASH_PDF_DIR / fname
+    shutil.copy2(path, str(dest))
+    # session info for metadata
+    try:
+        from dashboard.database import session_summary
+        s = session_summary(sid)
+        sname = s.get("name", f"Session {sid}") if s else f"Session {sid}"
+    except Exception:
+        sname = f"Session {sid}"
+    meta = {
+        "filename": fname, "mode": mode, "created": _dt.now().isoformat(),
+        "session_id": sid, "session_name": sname,
+    }
+    (_DASH_PDF_DIR / (fname + ".json")).write_text(json.dumps(meta), encoding="utf-8")
+
     return FileResponse(path, media_type="application/pdf",
                         filename=f"session_{sid}_report{suffix}.pdf")
+
+
+@app.get("/api/dash/pdf_history")
+def dash_pdf_history(mode: str = "all"):
+    """List saved dashboard PDF reports. mode=single|multi|all."""
+    items = []
+    for f in sorted(_DASH_PDF_DIR.glob("*.pdf.json"), reverse=True):
+        try:
+            meta = json.loads(f.read_text(encoding="utf-8"))
+            if mode != "all" and meta.get("mode") != mode:
+                continue
+            items.append(meta)
+        except Exception:
+            continue
+    return {"reports": items}
+
+
+@app.get("/api/dash/pdf_history/{filename}")
+def dash_pdf_download(filename: str):
+    path = _DASH_PDF_DIR / filename
+    if not path.exists() or not path.suffix == ".pdf":
+        raise HTTPException(404, "Report not found")
+    return FileResponse(str(path), media_type="application/pdf", filename=filename)
+
+
+@app.delete("/api/dash/pdf_history/{filename}")
+def dash_pdf_delete(filename: str):
+    path = _DASH_PDF_DIR / filename
+    meta = _DASH_PDF_DIR / (filename + ".json")
+    if path.exists():
+        path.unlink()
+    if meta.exists():
+        meta.unlink()
+    return {"ok": True}
+
+
+@app.delete("/api/dash/pdf_history")
+def dash_pdf_clear(mode: str = "all"):
+    for f in list(_DASH_PDF_DIR.glob("*.pdf.json")):
+        try:
+            meta = json.loads(f.read_text(encoding="utf-8"))
+            if mode != "all" and meta.get("mode") != mode:
+                continue
+            pdf_path = _DASH_PDF_DIR / meta["filename"]
+            if pdf_path.exists():
+                pdf_path.unlink()
+            f.unlink()
+        except Exception:
+            continue
+    return {"ok": True}
+
 
 # ── REST: participants ────────────────────────────────────────────────────────
 class ParticipantIn(BaseModel):
@@ -861,6 +939,9 @@ class YTState:
     auto_learn:        bool        = False  # auto teach from own predictions
     last_auto_teach:   float       = 0.0   # throttle timer
     last_secondary:    list        = []    # carry-forward last known secondary emotions
+    # Replay buffer for anti-forgetting
+    replay_buffer:     list        = []     # list of (embedding, label_idx)
+    multi_replay_buffer: list      = []     # list of (embedding, target_vec)
     # History for PDF report
     history:           list        = []     # list of inference result dicts (capped at 1000)
     _url:              str         = ""     # current YouTube URL
@@ -903,10 +984,12 @@ import torch.nn.functional as F
 _online_optimizer = None
 _online_scaler    = None
 _online_configured = False
-ONLINE_LR          = 5e-6
+ONLINE_LR          = 5e-4    # sweet spot: 5e-6 too low, 2e-3 causes catastrophic forgetting
 ONLINE_GRAD_CLIP   = 1.0
 ONLINE_LABEL_SMOOTH = 0.05
 ONLINE_SAVE_EVERY  = 10
+REPLAY_MAX         = 64      # max past corrections to remember
+REPLAY_SAMPLE      = 4       # how many old corrections to mix in per teach step
 
 # Class weights: boost under-performing classes (anger=3x, fear=2.5x, disgust=2x)
 _ONLINE_CLASS_WEIGHTS = None
@@ -933,22 +1016,42 @@ def _init_online_training():
     print(f"[online] Training initialized. Trainable: {n:,} params")
 
 def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
-    """Single training step — uses cached embedding, skips backbone (fast)."""
-    buf = yt_state.audio_buffer if source == "yt" else state.audio_buffer
+    """Single training step with replay buffer to prevent catastrophic forgetting."""
+    import random
+    buf = yt_state.audio_buffer if source in ("yt", "yt_auto") else state.audio_buffer
+    replay = yt_state.replay_buffer if source in ("yt", "yt_auto") else state.replay_buffer
     with yt_state.teach_lock:
         if not buf:
             return {"success": False, "error": "No audio buffered yet"}
         _init_online_training()
 
-        emb = buf[-1].to(device)   # cached 256-dim embedding, no backbone needed
-        label = torch.tensor([emotion_idx], dtype=torch.long, device=device)
+        # Current correction: only the LAST embedding (most recent audio)
+        current_emb = buf[-1].to(device)
+
+        # Store in replay buffer for future anti-forgetting
+        if len(replay) >= REPLAY_MAX:
+            replay.pop(random.randint(0, len(replay) - 1))
+        replay.append((current_emb.detach().clone(), emotion_idx))
+
+        # Build training batch: current + random replay samples
+        emb_list = [current_emb]
+        label_list = [emotion_idx]
+        if len(replay) > 1:
+            n_replay = min(REPLAY_SAMPLE, len(replay) - 1)
+            samples = random.sample(replay[:-1], n_replay)  # exclude the one we just added
+            for emb_r, lbl_r in samples:
+                emb_list.append(emb_r.to(device))
+                label_list.append(lbl_r)
+
+        embs = torch.cat(emb_list, dim=0)   # [1+replay, 256]
+        labels = torch.tensor(label_list, dtype=torch.long, device=device)
 
         _model.heads.train()
         try:
             _online_optimizer.zero_grad()
-            out = _model.heads(emb)
+            out = _model.heads(embs)
             loss = F.cross_entropy(
-                out["primary_logits"], label,
+                out["primary_logits"], labels,
                 weight=_ONLINE_CLASS_WEIGHTS,
                 label_smoothing=ONLINE_LABEL_SMOOTH,
             )
@@ -983,22 +1086,48 @@ def do_teach_step(emotion_idx: int, source: str = "yt") -> dict:
             _model.heads.eval()
 
 def do_multi_teach_step(emotion_indices: list, source: str = "yt", _count: bool = True) -> dict:
-    """Multi-label training step — BCEWithLogitsLoss on secondary head (sigmoid)."""
+    """Multi-label training step — BCEWithLogitsLoss on secondary head (sigmoid).
+    Uses replay buffer to prevent catastrophic forgetting."""
+    import random
     buf = yt_state.audio_buffer if source in ("yt", "yt_auto") else state.audio_buffer
+    replay = yt_state.multi_replay_buffer if source in ("yt", "yt_auto") else state.multi_replay_buffer
     with yt_state.teach_lock:
         if not buf:
             return {"success": False, "error": "No audio buffered yet"}
         _init_online_training()
-        emb = buf[-1].to(device)
-        target = torch.zeros(1, 11, device=device)
+
+        # Current correction: only the LAST embedding (most recent audio)
+        current_emb = buf[-1].to(device)
+
+        # Build target vector for this correction
+        current_target = torch.zeros(11, device=device)
         for i in emotion_indices:
-            target[0, i] = 1.0
+            current_target[i] = 1.0
+
+        # Store in replay buffer for future anti-forgetting
+        if len(replay) >= REPLAY_MAX:
+            replay.pop(random.randint(0, len(replay) - 1))
+        replay.append((current_emb.detach().clone(), current_target.detach().clone()))
+
+        # Build training batch: current + random replay samples
+        emb_list = [current_emb]
+        target_list = [current_target]
+        if len(replay) > 1:
+            n_replay = min(REPLAY_SAMPLE, len(replay) - 1)
+            samples = random.sample(replay[:-1], n_replay)  # exclude the one we just added
+            for emb_r, tgt_r in samples:
+                emb_list.append(emb_r.to(device))
+                target_list.append(tgt_r.to(device))
+
+        embs = torch.cat([e.unsqueeze(0) if e.dim() == 1 else e for e in emb_list], dim=0)  # [1+replay, 256]
+        targets = torch.stack(target_list, dim=0)  # [1+replay, 11]
+
         _model.heads.train()
         try:
             _online_optimizer.zero_grad()
-            out = _model.heads(emb)
+            out = _model.heads(embs)
             loss = F.binary_cross_entropy_with_logits(
-                out["secondary_logits"], target,
+                out["secondary_logits"], targets,
                 pos_weight=torch.full((11,), 3.0, device=device),
             )
             if not torch.isfinite(loss):
@@ -1013,7 +1142,7 @@ def do_multi_teach_step(emotion_indices: list, source: str = "yt", _count: bool 
             if yt_state.teach_count % ONLINE_SAVE_EVERY == 0:
                 torch.save(_model.state_dict(), ONLINE_CKPT)
                 print(f"[online] Checkpoint saved ({yt_state.teach_count} steps)")
-            print(f"[online] multi-teach #{yt_state.teach_count}: labels={taught_names} loss={loss.item():.4f}")
+            print(f"[online] multi-teach #{yt_state.teach_count}: labels={taught_names} loss={loss.item():.4f} replay={len(replay)}")
             return {
                 "success": True,
                 "loss": round(loss.item(), 4),
@@ -1310,6 +1439,79 @@ def yt_load(body: YTLoadIn):
         print(f"[yt_load] ERROR: {e}")
         raise HTTPException(400, str(e))
 
+
+# ── Local video upload ───────────────────────────────────────────────────────
+_LOCAL_VIDEO_DIR = BASE / "dashboard" / "local_videos"
+_LOCAL_VIDEO_DIR.mkdir(exist_ok=True)
+
+@app.post("/api/yt/load_local")
+async def yt_load_local(file: UploadFile = File(...)):
+    """Upload a local video file, then start the same ffmpeg audio+video pipeline."""
+    _yt_cleanup()
+    try:
+        # Save uploaded file
+        import re as _re
+        safe_name = _re.sub(r'[^\w.\-]', '_', file.filename or "video.mp4")
+        dest = _LOCAL_VIDEO_DIR / safe_name
+        with open(dest, "wb") as f:
+            while chunk := await file.read(1024 * 1024):
+                f.write(chunk)
+        file_path = str(dest)
+        title = Path(safe_name).stem.replace("_", " ")
+        print(f"[local_load] Saved: {file_path} ({dest.stat().st_size / 1e6:.1f} MB)")
+
+        # Audio pipe: ffmpeg reads local file → 16kHz PCM
+        audio_proc = subprocess.Popen(
+            [_FFMPEG,
+             "-re",
+             "-i", file_path,
+             "-vn", "-f", "s16le", "-ar", "16000", "-ac", "1", "-"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        yt_state._audio_proc = audio_proc
+        print(f"[local_load] audio ffmpeg started, pid: {audio_proc.pid}")
+
+        # Video pipe: ffmpeg reads local file → raw frames for face detection
+        video_proc = subprocess.Popen(
+            [_FFMPEG,
+             "-re",
+             "-i", file_path,
+             "-an", "-f", "rawvideo", "-pix_fmt", "bgr24",
+             "-s", "320x240", "-r", "2", "-"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        yt_state._video_proc = video_proc
+        print(f"[local_load] video ffmpeg started, pid: {video_proc.pid}")
+
+        yt_state.running    = True
+        yt_state.muted      = False
+        yt_state.face_probs = None
+        yt_state.stress_ema = 0.2
+        yt_state._url       = f"local://{safe_name}"
+        yt_state._title     = title
+        yt_state.history    = []
+
+        return {"ok": True, "title": title, "filename": safe_name}
+    except Exception as e:
+        print(f"[local_load] ERROR: {e}")
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/yt/local_video/{filename}")
+def serve_local_video(filename: str):
+    """Serve a local video file for the <video> element."""
+    import re as _re
+    safe = _re.sub(r'[^\w.\-]', '_', filename)
+    path = _LOCAL_VIDEO_DIR / safe
+    if not path.exists():
+        raise HTTPException(404, "Video not found")
+    # Determine MIME type
+    ext = path.suffix.lower()
+    mime = {"mp4": "video/mp4", "webm": "video/webm", "mkv": "video/x-matroska",
+            "avi": "video/x-msvideo", "mov": "video/quicktime"}.get(ext.lstrip("."), "video/mp4")
+    return FileResponse(str(path), media_type=mime)
+
+
 @app.get("/api/yt/debug")
 def yt_debug():
     """Full latest result with all probs."""
@@ -1403,17 +1605,20 @@ def yt_history_api(limit: int = 60):
     h = yt_state.history[-limit:] if yt_state.history else []
     return {"history": h, "total": len(yt_state.history)}
 
+# ── YT PDF report storage ────────────────────────────────────────────────────
+_YT_PDF_DIR = BASE / "dashboard" / "pdf_reports"
+_YT_PDF_DIR.mkdir(exist_ok=True)
+
 @app.get("/api/yt/report")
 def yt_report(mode: str = "single"):
-    """Generate and download a PDF report for the current YT session."""
-    import tempfile
+    """Generate PDF report, save a copy in pdf_reports/, and return it."""
+    from datetime import datetime as _dt
     from dashboard.pdf_report import export_yt_pdf, export_yt_pdf_multi
 
     history = yt_state.history
     if not history:
         raise HTTPException(400, "No readings to export — load and play a video first")
 
-    # Build data dict for export_yt_pdf
     emotions = [r["emotion"] for r in history]
     from collections import Counter
     emo_counts = Counter(emotions)
@@ -1438,14 +1643,85 @@ def yt_report(mode: str = "single"):
         "history":        history,
     }
 
-    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-    tmp.close()
-    fname = "MSTDN_YT_MultiEmotion_Report.pdf" if mode == "multi" else "MSTDN_YT_Report.pdf"
+    stamp = _dt.now().strftime("%Y%m%d_%H%M%S")
+    import re
+    title_slug = re.sub(r'[^\w\-]', '_', (yt_state._title or "untitled")[:40]).strip('_')
+    fname = f"yt_{mode}_{stamp}_{title_slug}.pdf"
+    out_path = str(_YT_PDF_DIR / fname)
+
     if mode == "multi":
-        export_yt_pdf_multi(data, tmp.name)
+        export_yt_pdf_multi(data, out_path)
     else:
-        export_yt_pdf(data, tmp.name)
-    return FileResponse(tmp.name, media_type="application/pdf", filename=fname)
+        export_yt_pdf(data, out_path)
+
+    # Save metadata alongside
+    meta = {
+        "filename": fname, "mode": mode, "created": _dt.now().isoformat(),
+        "title": yt_state._title or "Untitled", "readings": len(history),
+        "dominant": dominant, "teach_count": yt_state.teach_count,
+    }
+    meta_path = _YT_PDF_DIR / (fname + ".json")
+    meta_path.write_text(json.dumps(meta), encoding="utf-8")
+
+    return FileResponse(out_path, media_type="application/pdf", filename=fname)
+
+
+@app.get("/api/yt/pdf_history")
+def yt_pdf_history(mode: str = "all"):
+    """List saved YT PDF reports. mode=single|multi|all."""
+    items = []
+    for f in sorted(_YT_PDF_DIR.glob("*.pdf.json"), reverse=True):
+        try:
+            meta = json.loads(f.read_text(encoding="utf-8"))
+            if mode != "all" and meta.get("mode") != mode:
+                continue
+            items.append(meta)
+        except Exception:
+            continue
+    return {"reports": items}
+
+
+@app.get("/api/yt/pdf_history/{filename}")
+def yt_pdf_download(filename: str):
+    """Download a saved YT PDF report."""
+    path = _YT_PDF_DIR / filename
+    if not path.exists() or not path.suffix == ".pdf":
+        raise HTTPException(404, "Report not found")
+    return FileResponse(str(path), media_type="application/pdf", filename=filename)
+
+
+@app.delete("/api/yt/pdf_history/{filename}")
+def yt_pdf_delete(filename: str):
+    """Delete a single saved YT PDF report."""
+    path = _YT_PDF_DIR / filename
+    meta = _YT_PDF_DIR / (filename + ".json")
+    if path.exists():
+        path.unlink()
+    if meta.exists():
+        meta.unlink()
+    return {"ok": True}
+
+
+@app.delete("/api/yt/pdf_history")
+def yt_pdf_clear(mode: str = "all"):
+    """Delete all saved YT PDF reports. mode=single|multi|all."""
+    for f in list(_YT_PDF_DIR.glob("*.pdf.json")):
+        try:
+            meta = json.loads(f.read_text(encoding="utf-8"))
+            if mode != "all" and meta.get("mode") != mode:
+                continue
+            pdf_path = _YT_PDF_DIR / meta["filename"]
+            if pdf_path.exists():
+                pdf_path.unlink()
+            f.unlink()
+        except Exception:
+            continue
+    return {"ok": True}
+
+
+# ── Dashboard PDF history ────────────────────────────────────────────────────
+_DASH_PDF_DIR = BASE / "dashboard" / "dash_pdf_reports"
+_DASH_PDF_DIR.mkdir(exist_ok=True)
 
 @app.post("/api/yt/blend")
 def yt_set_blend(body: BlendIn):

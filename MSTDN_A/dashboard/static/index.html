@@ -550,6 +550,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
         <button class="btn-clear" onclick="clearAllSessions()" title="Clear all sessions">Clear All</button>
       </div>
       <div id="sessions-list"><div style="font-size:13px;color:var(--text-muted)">Loading...</div></div>
+      <div style="height:1px;background:var(--border);margin:12px 0"></div>
+      <div class="section-hdr">
+        <div class="chart-label" style="margin:0"><i class="bi bi-file-earmark-pdf"></i> PDF History <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="dash-pdf-count">(0)</span></div>
+        <button class="btn-clear" onclick="clearAllDashPDFs()" title="Clear all PDF reports">Clear All</button>
+      </div>
+      <div id="dash-pdf-list"><div style="font-size:13px;color:var(--text-muted)">Loading...</div></div>
     </div>
   </div>
 
@@ -1232,21 +1238,64 @@ async function loadSessions(){
     const r=await fetch('/api/sessions');
     const sessions=await r.json();
     const el=document.getElementById('sessions-list');
-    if(!sessions.length){el.innerHTML='<div style="font-size:13px;color:var(--text-muted);padding:12px 0">No past sessions.</div>';return;}
-    el.innerHTML=sessions.map(s=>`
-      <div class="h-item" id="sess-${s.id}" style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div class="h-item-name">${esc(s.name)}</div>
-          <div class="h-item-date">${s.start} &mdash; ${s.participants||0} participants</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="export-btn" onclick="window.open('/api/session/${s.id}/export?mode='+DASH_MODE)"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
-          <button class="btn-clear" onclick="clearSession('${s.id}')" title="Delete session"><i class="bi bi-trash"></i></button>
-        </div>
-      </div>`).join('');
+    if(!sessions.length){el.innerHTML='<div style="font-size:13px;color:var(--text-muted);padding:12px 0">No past sessions.</div>';}
+    else{
+      el.innerHTML=sessions.map(s=>`
+        <div class="h-item" id="sess-${s.id}" style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="h-item-name">${esc(s.name)}</div>
+            <div class="h-item-date">${s.start} &mdash; ${s.participants||0} participants</div>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="export-btn" onclick="window.open('/api/session/${s.id}/export?mode=single')" title="Single-mode PDF" style="font-size:10px;padding:3px 8px"><i class="bi bi-file-earmark-pdf"></i> Single</button>
+            <button class="export-btn" onclick="window.open('/api/session/${s.id}/export?mode=multi')" title="Multi-mode PDF" style="font-size:10px;padding:3px 8px;background:var(--purple-bg);color:var(--purple);border-color:var(--purple)"><i class="bi bi-file-earmark-pdf"></i> Multi</button>
+            <button class="btn-clear" onclick="clearSession('${s.id}')" title="Delete session"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>`).join('');
+    }
+    // Also load PDF history
+    loadDashPDFHistory();
   }catch(e){
     document.getElementById('sessions-list').innerHTML='<div style="font-size:13px;color:var(--text-muted)">Failed to load sessions.</div>';
   }
+}
+
+async function loadDashPDFHistory(){
+  try{
+    const r=await fetch('/api/dash/pdf_history?mode='+DASH_MODE);
+    const d=await r.json();
+    const reports=d.reports||[];
+    const el=document.getElementById('dash-pdf-list');
+    document.getElementById('dash-pdf-count').textContent='('+reports.length+')';
+    if(!reports.length){el.innerHTML='<div style="font-size:13px;color:var(--text-muted);padding:8px 0">No PDF reports generated yet.</div>';return;}
+    el.innerHTML=reports.map(r=>{
+      const dt=new Date(r.created);
+      const dateStr=dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      const modeTag=r.mode==='multi'?'<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:#ede9fe;color:#7c3aed">MULTI</span>':'<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:#dbeafe;color:#2563eb">SINGLE</span>';
+      return `<div class="h-item" style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="h-item-name">${modeTag} ${esc(r.session_name||'Session')}</div>
+          <div class="h-item-date">${dateStr}</div>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="export-btn" onclick="window.open('/api/dash/pdf_history/${r.filename}')" style="font-size:10px;padding:3px 8px"><i class="bi bi-download"></i> Open</button>
+          <button class="btn-clear" onclick="deleteDashPDF('${r.filename}')" title="Delete"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('dash-pdf-list').innerHTML='<div style="font-size:13px;color:var(--text-muted)">Failed to load PDF history.</div>';
+  }
+}
+
+function deleteDashPDF(filename){
+  if(!confirm('Delete this PDF report?')) return;
+  fetch('/api/dash/pdf_history/'+filename,{method:'DELETE'}).then(()=>loadDashPDFHistory()).catch(()=>{});
+}
+
+function clearAllDashPDFs(){
+  if(!confirm('Delete ALL PDF reports? This cannot be undone.')) return;
+  fetch('/api/dash/pdf_history?mode=all',{method:'DELETE'}).then(()=>loadDashPDFHistory()).catch(()=>{});
 }
 
 async function clearSession(sid){
@@ -1399,7 +1448,10 @@ const DASH_MODE = location.pathname.startsWith('/multi') ? 'multi' : 'single';
 
 // ── PDF download (mode-aware) ───────────────────────────────────────────────────
 function downloadPDF(){
-  if(sessionId) window.open('/api/session/'+sessionId+'/export?mode='+DASH_MODE);
+  if(sessionId){
+    window.open('/api/session/'+sessionId+'/export?mode='+DASH_MODE);
+    setTimeout(loadDashPDFHistory, 2000);
+  }
 }
 
 // ── multi-teach state ───────────────────────────────────────────────────────────
